@@ -70,6 +70,7 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .vmsg{padding:24px;text-align:center;color:var(--mute)}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
 .chk input{padding:0}
+.sep{width:1px;background:var(--line);margin:2px 4px}
 .empty{text-align:center;color:var(--mute);padding:40px 0}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
 dialog::backdrop{background:#0009}
@@ -106,7 +107,6 @@ dialog textarea{min-height:90px;resize:vertical}
       <select id="orden"><option value="cat">Por categoría</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
     </div>
     <div class="chips" id="cats"></div>
-    <div class="chips" id="estados"></div>
     <div class="chips" id="chats"></div>
     <div class="chips" id="tipos"></div>
   </div>
@@ -206,10 +206,14 @@ function render(){
   const tiposU = [...new Set(data.map(e => e.tipo))].sort();
   const catsU = [...new Set(data.map(e => e.categoria || 'Sin categoría'))].sort();
   chips($('cats'), catsU, 'categoria');
-  chips($('estados'), ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)), 'estado');
   chips($('chats'), chatsU, 'chat');
   $('catsList').replaceChildren(...catsU.map(c => { const o = el('option'); o.value = c; return o; }));
-  chips($('tipos'), tiposU, 'tipo');
+  const tc = $('tipos'); tc.replaceChildren();
+  const mk = (t, on, fn) => { const ch = el('span','chip' + (on ? ' on' : ''), t); ch.onclick = fn; tc.append(ch); };
+  mk('Todos', !filtro.tipo && !filtro.estado, () => { filtro.tipo = ''; filtro.estado = ''; render(); });
+  tiposU.forEach(v => mk(v, filtro.tipo === v, () => { filtro.tipo = filtro.tipo === v ? '' : v; render(); }));
+  tc.append(el('span','sep'));
+  ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)).forEach(v => mk(v, filtro.estado === v, () => { filtro.estado = filtro.estado === v ? '' : v; render(); }));
   $('chatsList').replaceChildren(...chatsU.map(c => { const o = el('option'); o.value = c; return o; }));
 
   const q = filtro.q.toLowerCase();
