@@ -430,11 +430,22 @@ function diffLines(a, b){
 }
 
 /* ---------- Markdown y notebooks (sin innerHTML) ---------- */
+function mdPlain(text, parent){
+  const rx = /(^|[^A-Za-z0-9_])_([^\s_](?:[^_\n]*[^\s_])?)_(?![A-Za-z0-9_])/g;
+  let last = 0, m;
+  while ((m = rx.exec(text))){
+    const ini = m.index + m[1].length;
+    if (ini > last) parent.append(text.slice(last, ini));
+    const e = el('strong'); mdInline(m[2], e); parent.append(e);
+    last = rx.lastIndex;
+  }
+  if (last < text.length) parent.append(text.slice(last));
+}
 function mdInline(text, parent){
   const re = /(`+)([\s\S]*?[^`])\1(?!`)|\*\*([\s\S]+?)\*\*|~~([\s\S]+?)~~|\*([^\s*][\s\S]*?)\*|\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)|(https?:\/\/[^\s<>)]+)/g;
   let last = 0, m;
   while ((m = re.exec(text))){
-    if (m.index > last) parent.append(text.slice(last, m.index));
+    if (m.index > last) mdPlain(text.slice(last, m.index), parent);
     if (m[2] !== undefined) parent.append(el('code', null, m[2]));
     else if (m[3] !== undefined){ const e = el('strong'); mdInline(m[3], e); parent.append(e); }
     else if (m[4] !== undefined){ const e = el('del'); mdInline(m[4], e); parent.append(e); }
@@ -445,7 +456,7 @@ function mdInline(text, parent){
     } else { const a = el('a', null, m[8]); a.href = m[8]; a.target = '_blank'; a.rel = 'noopener noreferrer'; parent.append(a); }
     last = re.lastIndex;
   }
-  if (last < text.length) parent.append(text.slice(last));
+  if (last < text.length) mdPlain(text.slice(last), parent);
 }
 const MD_LI = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
 const MD_SEP = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
