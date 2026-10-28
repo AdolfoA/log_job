@@ -80,6 +80,23 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .tokpanel p{margin:6px 0 10px;font-size:13px;color:var(--mute)}
 .fdir{font:12.5px ui-monospace,Consolas,monospace;color:var(--text);cursor:pointer;padding:4px 6px;list-style-position:inside}
 details.fd > div{padding-left:12px;border-left:1px solid var(--line);margin-left:8px}
+.md{line-height:1.6;font-size:14.5px;overflow-wrap:anywhere}
+.md>*:first-child{margin-top:0}.md>*:last-child{margin-bottom:0}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:1.1em 0 .4em;line-height:1.25}
+.md h1{font-size:1.6em;border-bottom:1px solid var(--line);padding-bottom:.2em}.md h2{font-size:1.3em;border-bottom:1px solid var(--line);padding-bottom:.15em}.md h3{font-size:1.12em}
+.md p{margin:.5em 0}.md ul,.md ol{margin:.4em 0;padding-left:1.5em}.md li{margin:.15em 0}
+.md code{font:12.5px ui-monospace,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+.md pre.mdpre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;margin:.6em 0}
+.md pre.mdpre code{background:none;border:none;padding:0}
+.md blockquote{margin:.6em 0;padding:.1em 12px;border-left:3px solid var(--acc);color:var(--mute)}
+.md a{color:var(--info)}.md hr{border:none;border-top:1px solid var(--line);margin:1em 0}
+.md table{border-collapse:collapse;margin:.6em 0;display:block;overflow:auto}
+.md th,.md td{border:1px solid var(--line);padding:5px 10px;text-align:left}.md th{background:var(--panel2)}
+.nb{padding:12px 14px}
+.nbcell{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px;margin-bottom:12px}
+.nbn{font:11.5px ui-monospace,Consolas,monospace;color:var(--mute);text-align:right;padding-top:8px}
+.cellcode{margin:0;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--acc2);border-radius:8px;padding:10px;overflow:auto;font:13px/1.5 ui-monospace,Consolas,monospace;white-space:pre}
+.nbcell.txt .md{padding:2px 4px}
 .empty{text-align:center;color:var(--mute);padding:40px 0}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
 dialog::backdrop{background:#0009}
@@ -146,6 +163,7 @@ dialog textarea{min-height:90px;resize:vertical}
         <div class="vbar" id="vbar" hidden>
           <div class="path" id="vpath"></div>
           <select id="vversion" aria-label="Versión"></select>
+          <label class="chk" id="vmodoL">Vista <select id="vmodo"><option value="fmt">Formateado</option><option value="cod">Código</option></select></label>
           <label class="chk"><input type="checkbox" id="vdiff"> Ver cambios</label>
           <button id="vcopiar">Copiar</button>
           <a id="vgh" target="_blank" rel="noopener">Ver en GitHub</a>
@@ -411,6 +429,94 @@ function diffLines(a, b){
   return out;
 }
 
+/* ---------- Markdown y notebooks (sin innerHTML) ---------- */
+function mdInline(text, parent){
+  const re = /(`+)([\s\S]*?[^`])\1(?!`)|\*\*([\s\S]+?)\*\*|~~([\s\S]+?)~~|\*([^\s*][\s\S]*?)\*|\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)|(https?:\/\/[^\s<>)]+)/g;
+  let last = 0, m;
+  while ((m = re.exec(text))){
+    if (m.index > last) parent.append(text.slice(last, m.index));
+    if (m[2] !== undefined) parent.append(el('code', null, m[2]));
+    else if (m[3] !== undefined){ const e = el('strong'); mdInline(m[3], e); parent.append(e); }
+    else if (m[4] !== undefined){ const e = el('del'); mdInline(m[4], e); parent.append(e); }
+    else if (m[5] !== undefined){ const e = el('em'); mdInline(m[5], e); parent.append(e); }
+    else if (m[6] !== undefined){
+      if (/^(https?:|mailto:)/i.test(m[7])){ const a = el('a'); a.href = m[7]; a.target = '_blank'; a.rel = 'noopener noreferrer'; mdInline(m[6], a); parent.append(a); }
+      else parent.append(m[6]);
+    } else { const a = el('a', null, m[8]); a.href = m[8]; a.target = '_blank'; a.rel = 'noopener noreferrer'; parent.append(a); }
+    last = re.lastIndex;
+  }
+  if (last < text.length) parent.append(text.slice(last));
+}
+const MD_LI = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+const MD_SEP = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
+function mdCells(l){ let t = l.trim(); if (t.startsWith('|')) t = t.slice(1); if (t.endsWith('|')) t = t.slice(0, -1); return t.split(/(?<!\\)\|/).map(x => x.trim().replace(/\\\|/g, '|')); }
+function mdList(lines, i){
+  const first = lines[i].match(MD_LI), indent = first[1].length, ordered = /\d/.test(first[2]);
+  const list = el(ordered ? 'ol' : 'ul');
+  while (i < lines.length){
+    if (/^\s*$/.test(lines[i])){
+      let j = i; while (j < lines.length && /^\s*$/.test(lines[j])) j++;
+      const nx = j < lines.length && lines[j].match(MD_LI);
+      if (nx && nx[1].length >= indent){ i = j; continue; } else break;
+    }
+    const m = lines[i].match(MD_LI); if (!m || m[1].length < indent) break;
+    if (m[1].length > indent){ const [sub, ni] = mdList(lines, i); (list.lastElementChild || list.appendChild(el('li'))).append(sub); i = ni; continue; }
+    if (/\d/.test(m[2]) !== ordered) break;
+    const li = el('li'); mdInline(m[3], li); list.append(li); i++;
+    while (i < lines.length && /^\s+\S/.test(lines[i]) && !MD_LI.test(lines[i]) && lines[i].match(/^\s*/)[0].length > indent){ li.append(' '); mdInline(lines[i].trim(), li); i++; }
+  }
+  return [list, i];
+}
+function mdRender(text){
+  const root = el('div', 'md'), lines = text.replace(/\r\n/g, '\n').split('\n'); let i = 0;
+  const blank = l => /^\s*$/.test(l);
+  const startsBlock = l => /^\s*(```|~~~)/.test(l) || /^#{1,6}\s/.test(l) || /^\s*>/.test(l) || MD_LI.test(l) || /^\s*([-*_])\s*(\1\s*){2,}$/.test(l);
+  while (i < lines.length){
+    const l = lines[i]; if (blank(l)){ i++; continue; }
+    let m = l.match(/^\s*(```+|~~~+)\s*[\w+-]*\s*$/);
+    if (m){
+      const ch = m[1][0], n = m[1].length, buf = []; i++;
+      while (i < lines.length && !new RegExp('^\\s*\\' + ch + '{' + n + ',}\\s*$').test(lines[i])) buf.push(lines[i++]);
+      i++; const pre = el('pre', 'mdpre'); pre.append(el('code', null, buf.join('\n'))); root.append(pre); continue;
+    }
+    m = l.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
+    if (m){ const h = el('h' + m[1].length); mdInline(m[2], h); root.append(h); i++; continue; }
+    if (/^\s*([-*_])\s*(\1\s*){2,}$/.test(l)){ root.append(el('hr')); i++; continue; }
+    if (/^\s*>/.test(l)){
+      const buf = []; while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ''));
+      const bq = el('blockquote'); bq.append(mdRender(buf.join('\n'))); root.append(bq); continue;
+    }
+    if (l.includes('|') && i + 1 < lines.length && MD_SEP.test(lines[i + 1])){
+      const head = mdCells(l), al = mdCells(lines[i + 1]).map(x => x.startsWith(':') && x.endsWith(':') ? 'center' : x.endsWith(':') ? 'right' : '');
+      i += 2; const t = el('table'), th = el('thead'), tr = el('tr');
+      head.forEach((c, k) => { const e = el('th'); mdInline(c, e); if (al[k]) e.style.textAlign = al[k]; tr.append(e); }); th.append(tr); t.append(th);
+      const tb = el('tbody');
+      while (i < lines.length && !blank(lines[i]) && lines[i].includes('|')){
+        const r = el('tr'); mdCells(lines[i]).forEach((c, k) => { const e = el('td'); mdInline(c, e); if (al[k]) e.style.textAlign = al[k]; r.append(e); }); tb.append(r); i++;
+      }
+      t.append(tb); root.append(t); continue;
+    }
+    if (MD_LI.test(l)){ const [list, ni] = mdList(lines, i); root.append(list); i = ni; continue; }
+    const p = el('p'), buf = [];
+    while (i < lines.length && !blank(lines[i]) && (buf.length === 0 || !startsBlock(lines[i]))) buf.push(lines[i++]);
+    buf.forEach((t, k) => { mdInline(t.replace(/\s{2,}$/, ''), p); if (k < buf.length - 1) p.append(/\s{2,}$/.test(t) ? el('br') : ' '); });
+    root.append(p);
+  }
+  return root;
+}
+function renderNotebook(text){
+  const nb = JSON.parse(text), box = el('div', 'nb');
+  nb.cells.forEach((c, i) => {
+    const src = Array.isArray(c.source) ? c.source.join('') : (c.source || '');
+    const esMd = c.cell_type === 'markdown' || (c.cell_type === 'code' && /^\s*%md\b/.test(src));
+    const row = el('div', 'nbcell' + (esMd ? ' txt' : '')); row.append(el('div', 'nbn', esMd ? String(i) : '[' + i + ']'));
+    if (esMd) row.append(mdRender(c.cell_type === 'code' ? src.replace(/^\s*%md\b[ \t]*\n?/, '') : src));
+    else { const pre = el('pre', 'cellcode'); pre.textContent = src; row.append(pre); }
+    box.append(row);
+  });
+  return {node: box, n: nb.cells.length};
+}
+
 function crumb(){
   const c = $('crumb'); c.replaceChildren();
   const s = code.src;
@@ -491,6 +597,7 @@ async function abrirArchivo(f){
     $('vpath').textContent = code.src.repo + ' @ ' + code.branch + ' / ' + f.full;
     $('vhist').href = 'https://github.com/' + code.src.repo + '/commits/' + code.branch + '/' + f.full;
     $('vbar').hidden = false;
+    $('vmodoL').hidden = !/\.(ipynb|md)$/i.test(f.full);
     await mostrarVersion();
   } catch (e) { msg(e.message); }
 }
@@ -505,10 +612,18 @@ async function mostrarVersion(){
   $('vgh').href = 'https://github.com/' + code.src.repo + '/blob/' + c.sha + '/' + f.full;
   if (code.size > 1500000){ msg('Archivo muy grande para mostrarlo aquí. Ábrelo con «Ver en GitHub».'); return; }
   try {
-    const text = paraVer(f.full, await rawFile(c.sha, f.full));
+    const orig = await rawFile(c.sha, f.full);
+    const text = paraVer(f.full, orig);
     code.texto = text;
     const lines = aLineas(text), info = $('vinfo'); info.hidden = false;
     const diff = $('vdiff').checked;
+    if (!diff && /\.(ipynb|md)$/i.test(f.full) && $('vmodo').value === 'fmt'){
+      try {
+        const esNb = /\.ipynb$/i.test(f.full), r = esNb ? renderNotebook(orig) : {node: mdRender(orig), n: 0};
+        info.textContent = (esNb ? r.n + ' celdas · ' : lines.length + ' líneas · ') + c.commit.author.name + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0] + ' · vista formateada';
+        $('vcode').replaceChildren(r.node); return;
+      } catch (e) { /* si no se puede formatear, se muestra como código */ }
+    }
     let ops;
     if (diff){
       const prev = code.commits[code.idx + 1];
@@ -541,7 +656,8 @@ $('tokBtn').onclick = () => { $('tokPanel').hidden = !$('tokPanel').hidden; };
 $('tokSave').onclick = () => { const v = $('tokInp').value.trim(); if (!v) return; setTok(code.src, v); $('tokInp').value = ''; cargarRepo(); };
 $('tokDel').onclick = () => { setTok(code.src, ''); try { sessionStorage.clear(); } catch {} cargarRepo(); };
 $('vversion').onchange = ev => { code.idx = +ev.target.value; mostrarVersion(); };
-$('vdiff').onchange = mostrarVersion;
+$('vdiff').onchange = () => { $('vmodo').disabled = $('vdiff').checked; mostrarVersion(); };
+$('vmodo').onchange = mostrarVersion;
 $('vcopiar').onclick = async ev => { try { await navigator.clipboard.writeText(code.texto || ''); ev.target.textContent = 'Copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar', 1500); } catch {} };
 
 let codigoIniciado = false;
