@@ -70,7 +70,7 @@
     "tipo": "Hallazgo",
     "estado": "Abierto",
     "titulo": "Account key de Azure Storage en texto plano (celda 4)",
-    "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo.",
+    "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo. Actualización 2026-10-28: en las copias guardadas en el repo CBC la key quedó reemplazada por «<REDACTED: usar dbutils.secrets>»; los notebooks originales no se tocaron. Sigue pendiente rotar la key.",
     "detalle": "",
     "tags": [
       "seguridad",
@@ -236,6 +236,117 @@
       "WSL2",
       "Docker Desktop",
       "Windows"
+    ]
+  },
+  {
+    "id": "2026-10-28-001",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Bitácora",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Creación de la bitácora (página estática en GitHub Pages)",
+    "resumen": "Página HTML + JSON sin dependencias, publicada desde el repo público AdolfoA/log_job (https://adolfoa.github.io/log_job/). Cada entrada tiene fecha, chat, categoría, tipo, estado, título, resumen, detalle/código y tags. Incluye búsqueda, filtros por categoría, chat, tipo y estado (Abierto, Resuelto, Hecho), contadores, tema claro/oscuro, y botones para crear, editar, borrar, exportar e importar entradas.",
+    "detalle": "Estados: Abierto (ámbar), Resuelto (verde, con ✓), Hecho.\nTipos: Cambio, Consulta, Pendiente, Hallazgo, Decisión.\nDatos del repo: data/entries.json. Entradas creadas en la página se guardan en el navegador; para publicarlas hay que exportar el JSON y reemplazar el archivo.\nFlujo con Claude: se pide «registra esto» y Claude edita data/entries.json y hace el commit.",
+    "tags": [
+      "bitácora",
+      "GitHub Pages",
+      "entries.json"
+    ]
+  },
+  {
+    "id": "2026-10-28-002",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Repos y código",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Creación del repo privado CBC con las ramas main y dev",
+    "resumen": "Repo privado AdolfoA/CBC, creado vacío por el usuario. Carpeta costos-plan-cs-cascadeo (el «/» de «c/s» no sirve en nombres de carpeta). Rama main: MODELO_COSTO_PLAN_CASCADEO.ipynb. Rama dev: OK_AGUA_MODELO_COSTO_PLAN_CASCADEO.ipynb. Ambas ramas parten de un commit con README de convenciones.",
+    "detalle": "Antes de guardarlos, los notebooks se limpiaron:\n- Se quitaron todas las salidas (el de OK_AGUA pasó de 16 MB a 266 KB).\n- La account key de Azure (2 apariciones por notebook, una comentada) se reemplazó por <REDACTED: usar dbutils.secrets>.\n- Los originales no se modificaron.\nQuedan visibles las rutas abfss://…@datalakecentralprd… y el nombre de la cuenta de almacenamiento (no son secretos).",
+    "tags": [
+      "CBC",
+      "ramas",
+      "notebooks"
+    ]
+  },
+  {
+    "id": "2026-10-28-003",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Repos y código",
+    "tipo": "Decisión",
+    "estado": "Hecho",
+    "titulo": "Código en repo privado y bitácora en repo público",
+    "resumen": "Como GitHub Pages solo publica gratis desde repos públicos y un repo privado no puede leerse desde la página sin credenciales, se acordó usar dos repos: log_job (público, sin código ni datos de la empresa) y CBC (privado, con el código). El visor lee CBC con un token de solo lectura que el usuario pega en su navegador.",
+    "detalle": "",
+    "tags": [
+      "privacidad",
+      "dos repos"
+    ]
+  },
+  {
+    "id": "2026-10-28-004",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Repos y código",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Token de acceso de solo lectura para el visor",
+    "resumen": "El usuario generó un token fine-grained de GitHub limitado al repo CBC, con permisos Contents: Read-only y Metadata: Read-only (este último lo agrega GitHub siempre). Se pega en la pestaña Código, botón «Token», y se guarda solo en el almacenamiento del navegador; solo se envía a api.github.com y nunca se escribe en el repo. Debe tener fecha de vencimiento; si se pierde o se expone, se borra en GitHub y se genera otro.",
+    "detalle": "Con token el límite de la API sube de 60 a 5.000 consultas por hora.\nEl token hay que pegarlo en cada navegador o dispositivo donde se use el visor.",
+    "tags": [
+      "token",
+      "seguridad",
+      "GitHub"
+    ]
+  },
+  {
+    "id": "2026-10-28-005",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Bitácora",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Visor de código en la pestaña Código",
+    "resumen": "Selector de repo y de rama, árbol de carpetas, ruta visible (repo · rama · archivo), historial de versiones por archivo, «Ver cambios» (líneas agregadas y quitadas frente a la versión anterior), botones Copiar, Ver en GitHub e Historial, y panel para el token. Ventana de código ancha (hasta 1700 px).",
+    "detalle": "Notebooks .ipynb: se muestran por celdas. Vista «Formateado» (predeterminada): celdas de texto en Markdown (títulos, listas, tablas, enlaces, código en línea; texto entre _guiones bajos_ en negrita sin alterar nombres como df_C_orig) y celdas de código en bloques numerados; vista «Código»: texto plano con números de línea.\nArchivos .md: también se muestran formateados.\nSin innerHTML: el contenido se dibuja con nodos de texto, así que HTML o enlaces javascript: en un notebook no ejecutan nada.\nLimitación: los notebooks se guardan sin salidas, por lo que no se ven resultados ni tablas de datos.",
+    "tags": [
+      "visor",
+      "Markdown",
+      "notebooks",
+      "diff"
+    ]
+  },
+  {
+    "id": "2026-10-28-006",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Bitácora",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Carpeta proyectos/ eliminada y carpeta codigos/ creada en log_job",
+    "resumen": "Se quitó proyectos/ del repo público y el visor quedó leyendo solo AdolfoA/CBC. Se creó codigos/ (con un README) para subir código más adelante. Como log_job es público, todo lo que se suba ahí es visible; el código de la empresa va en CBC.",
+    "detalle": "",
+    "tags": [
+      "log_job",
+      "codigos"
+    ]
+  },
+  {
+    "id": "2026-10-28-007",
+    "fecha": "2026-10-28",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Modelo de costos",
+    "tipo": "Pendiente",
+    "estado": "Abierto",
+    "titulo": "Reubicar el bloque que completa df_C en la celda de dataframes base",
+    "resumen": "En la versión de la celda revisada el 2026-10-28 el bloque «Completar df_C» (puestos faltantes de df_A_volumen con monto 0, por mes y tipo) ya no aparecía entre df_C.select(df_C.columns[:11]) y el bloque de df_E. Sin él, el puesto 2001 no entra al join de la celda 28 y su costo se pierde sin error. Falta volver a pegarlo (versión corregida sin ambigüedad de Periodo_Mes) y probar con la planta SP00 (deben salir 24 filas nuevas).",
+    "detalle": "",
+    "tags": [
+      "df_C",
+      "SP00",
+      "puesto 2001"
     ]
   }
 ]
