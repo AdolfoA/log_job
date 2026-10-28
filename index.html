@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitácora Adolfo</title>
+<style>
+:root{--bg:#0b0f14;--panel:#111821;--panel2:#0e141b;--line:#1f2b38;--text:#e6edf3;--mute:#8b9bb0;--acc:#10b981;--acc2:#0f766e;--warn:#f59e0b;--bad:#ef4444;--info:#38bdf8}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]){--bg:#f5f7fa;--panel:#fff;--panel2:#f0f3f7;--line:#d8e0ea;--text:#18212b;--mute:#5b6b7e;--acc:#0b8f66;--acc2:#0b8f66}}
+:root[data-theme=light]{--bg:#f5f7fa;--panel:#fff;--panel2:#f0f3f7;--line:#d8e0ea;--text:#18212b;--mute:#5b6b7e;--acc:#0b8f66;--acc2:#0b8f66}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:22px;margin:0}
+h1 small{font:12px ui-monospace,Consolas,monospace;color:var(--acc);margin-left:8px}
+.bar{display:flex;gap:8px;flex-wrap:wrap}
+button,select,input,textarea{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px}
+button{cursor:pointer}button:hover{border-color:var(--acc)}
+button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font:12px ui-monospace,Consolas,monospace;color:var(--mute)}
+.stat b{color:var(--text)}
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px;display:grid;gap:10px}
+.filters .row{display:flex;gap:8px;flex-wrap:wrap}
+.filters input[type=search]{flex:1;min-width:180px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;cursor:pointer;color:var(--mute)}
+.chip.on{background:var(--acc2);border-color:var(--acc2);color:#fff}
+.entry{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+.entry.open-state{border-left:3px solid var(--warn)}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font:12px ui-monospace,Consolas,monospace;color:var(--mute);margin-bottom:6px}
+.badge{border:1px solid var(--line);border-radius:6px;padding:1px 8px}
+.t-Cambio{color:var(--acc)}.t-Consulta{color:var(--info)}.t-Pendiente{color:var(--warn)}.t-Hallazgo{color:var(--bad)}.t-Decisión{color:#a78bfa}
+.entry h3{margin:0 0 6px;font-size:16px}
+.entry p{margin:0;color:var(--text);white-space:pre-wrap}
+details{margin-top:8px}summary{cursor:pointer;color:var(--mute);font-size:13px}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;font:12.5px/1.5 ui-monospace,Consolas,monospace;margin:8px 0 0}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{font:11px ui-monospace,Consolas,monospace;color:var(--mute)}
+.actions{display:flex;gap:6px;margin-top:10px}
+.actions button{padding:3px 10px;font-size:12px}
+.empty{text-align:center;color:var(--mute);padding:40px 0}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
+dialog::backdrop{background:#0009}
+dialog form{display:grid;gap:10px}
+dialog label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+dialog textarea{min-height:90px;resize:vertical}
+.note{font-size:12px;color:var(--mute);margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bitácora Adolfo<small>log de chats</small></h1>
+    <div class="bar">
+      <button class="pri" id="nuevo">+ Nueva entrada</button>
+      <button id="exportar">Exportar JSON</button>
+      <button id="importar">Importar</button>
+      <button id="tema" title="Cambiar tema">◐</button>
+      <input type="file" id="archivo" accept=".json" hidden>
+    </div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <div class="row">
+      <input type="search" id="buscar" placeholder="Buscar en título, resumen, código o tags…">
+      <select id="orden"><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
+    </div>
+    <div class="chips" id="chats"></div>
+    <div class="chips" id="tipos"></div>
+  </div>
+
+  <div id="lista"></div>
+  <p class="note" id="nota"></p>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="form">
+    <h2 style="margin:0" id="dlgTitulo">Nueva entrada</h2>
+    <label>Chat<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]" required></label>
+    <datalist id="chatsList"></datalist>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <label>Fecha<input type="date" name="fecha" required></label>
+      <label>Tipo<select name="tipo"><option>Cambio</option><option>Consulta</option><option>Pendiente</option><option>Hallazgo</option><option>Decisión</option></select></label>
+      <label>Estado<select name="estado"><option>Hecho</option><option>Abierto</option></select></label>
+    </div>
+    <label>Título<input name="titulo" required></label>
+    <label>Resumen<textarea name="resumen" required></textarea></label>
+    <label>Detalle / código (opcional)<textarea name="detalle"></textarea></label>
+    <label>Tags (separados por coma)<input name="tags"></label>
+    <div class="bar" style="justify-content:flex-end">
+      <button type="button" id="cancelar">Cancelar</button>
+      <button class="pri" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const LS = 'adolfo-log-local-v1';
+let base = [];            // entradas del repo (data/entries.json)
+let locales = [];         // entradas creadas/editadas en este navegador
+let filtro = {chat:'', tipo:'', q:'', orden:'desc'};
+let editando = null;
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+
+function leerLocal(){ try { return JSON.parse(localStorage.getItem(LS)) || []; } catch { return []; } }
+function guardarLocal(){ try { localStorage.setItem(LS, JSON.stringify(locales)); } catch {} }
+
+function todas(){
+  const m = new Map();
+  base.forEach(e => m.set(e.id, e));
+  locales.forEach(e => m.set(e.id, e));
+  return [...m.values()].filter(e => !e._borrada);
+}
+
+async function cargar(){
+  locales = leerLocal();
+  try {
+    const r = await fetch('data/entries.json', {cache:'no-store'});
+    if (!r.ok) throw 0;
+    base = await r.json();
+    $('nota').textContent = 'Entradas del repo: ' + base.length + ' · Locales (este navegador): ' + locales.length + '. Para que otros dispositivos las vean, exporta el JSON y reemplaza data/entries.json en el repo.';
+  } catch {
+    base = [];
+    $('nota').textContent = 'No se pudo leer data/entries.json (¿abriste el archivo directo desde el disco?). Sirve la carpeta con "python -m http.server" o despliega en GitHub Pages.';
+  }
+  render();
+}
+
+function chips(cont, valores, clave){
+  cont.replaceChildren();
+  const mk = (v, t) => { const c = el('span','chip'+(filtro[clave]===v?' on':''), t); c.onclick = () => { filtro[clave] = v; render(); }; cont.append(c); };
+  mk('', 'Todos');
+  valores.forEach(v => mk(v, v));
+}
+
+function render(){
+  const data = todas();
+  const chatsU = [...new Set(data.map(e => e.chat))].sort();
+  const tiposU = [...new Set(data.map(e => e.tipo))].sort();
+  chips($('chats'), chatsU, 'chat');
+  chips($('tipos'), tiposU, 'tipo');
+  $('chatsList').replaceChildren(...chatsU.map(c => { const o = el('option'); o.value = c; return o; }));
+
+  const q = filtro.q.toLowerCase();
+  let vis = data.filter(e =>
+    (!filtro.chat || e.chat === filtro.chat) &&
+    (!filtro.tipo || e.tipo === filtro.tipo) &&
+    (!q || [e.titulo, e.resumen, e.detalle, (e.tags||[]).join(' '), e.chat].join(' ').toLowerCase().includes(q))
+  ).sort((a,b) => (a.fecha + a.id).localeCompare(b.fecha + b.id) * (filtro.orden === 'asc' ? 1 : -1));
+
+  const st = $('stats'); st.replaceChildren();
+  [['Entradas', data.length], ['Chats', chatsU.length], ['Abiertas', data.filter(e => e.estado === 'Abierto').length], ['Mostrando', vis.length]]
+    .forEach(([k,v]) => { const s = el('span','stat', k + ' '); const b = el('b', null, v); s.append(b); st.append(s); });
+
+  const L = $('lista'); L.replaceChildren();
+  if (!vis.length){ L.append(el('div','empty','Sin entradas para este filtro.')); return; }
+  vis.forEach(e => {
+    const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : ''));
+    const m = el('div','meta');
+    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span',null,'· '+e.estado));
+    c.append(m, el('h3',null,e.titulo), el('p',null,e.resumen));
+    if (e.detalle){ const d = el('details'); d.append(el('summary',null,'Ver detalle / código'), el('pre',null,e.detalle)); c.append(d); }
+    if ((e.tags||[]).length){ const t = el('div','tags'); e.tags.forEach(x => t.append(el('span','tag','#'+x))); c.append(t); }
+    const a = el('div','actions');
+    const be = el('button',null,'Editar'); be.onclick = () => abrir(e);
+    const bs = el('button',null, e.estado === 'Abierto' ? 'Marcar hecho' : 'Reabrir');
+    bs.onclick = () => { upsert({...e, estado: e.estado === 'Abierto' ? 'Hecho' : 'Abierto'}); };
+    const bd = el('button',null,'Borrar'); bd.onclick = () => { if (confirm('¿Borrar esta entrada?')) upsert({...e, _borrada:true}); };
+    a.append(be, bs, bd); c.append(a);
+    L.append(c);
+  });
+}
+
+function upsert(e){
+  const i = locales.findIndex(x => x.id === e.id);
+  if (i >= 0) locales[i] = e; else locales.push(e);
+  guardarLocal(); render();
+}
+
+function nuevoId(fecha){
+  const n = todas().filter(e => e.fecha === fecha).length + 1;
+  let id = fecha + '-' + String(n).padStart(3,'0');
+  const usados = new Set([...base, ...locales].map(e => e.id));
+  while (usados.has(id)) id = fecha + '-' + String(+id.slice(-3) + 1).padStart(3,'0');
+  return id;
+}
+
+function abrir(e){
+  editando = e || null;
+  const f = $('form'); f.reset();
+  $('dlgTitulo').textContent = e ? 'Editar entrada' : 'Nueva entrada';
+  const v = e || {fecha: new Date().toISOString().slice(0,10), chat: filtro.chat, tipo:'Cambio', estado:'Hecho', tags:[]};
+  ['chat','fecha','tipo','estado','titulo','resumen','detalle'].forEach(k => f.elements[k].value = v[k] || '');
+  f.elements.tags.value = (v.tags||[]).join(', ');
+  $('dlg').showModal();
+}
+
+$('form').addEventListener('submit', ev => {
+  const f = ev.target.elements;
+  const e = {
+    id: editando ? editando.id : nuevoId(f.fecha.value),
+    fecha: f.fecha.value, chat: f.chat.value.trim(), tipo: f.tipo.value, estado: f.estado.value,
+    titulo: f.titulo.value.trim(), resumen: f.resumen.value.trim(), detalle: f.detalle.value,
+    tags: f.tags.value.split(',').map(s => s.trim()).filter(Boolean)
+  };
+  upsert(e);
+});
+$('cancelar').onclick = () => $('dlg').close();
+$('nuevo').onclick = () => abrir(null);
+$('buscar').oninput = ev => { filtro.q = ev.target.value; render(); };
+$('orden').onchange = ev => { filtro.orden = ev.target.value; render(); };
+
+$('exportar').onclick = () => {
+  const out = todas().sort((a,b) => (a.fecha+a.id).localeCompare(b.fecha+b.id));
+  const blob = new Blob([JSON.stringify(out, null, 2)], {type:'application/json'});
+  const a = el('a'); a.href = URL.createObjectURL(blob); a.download = 'entries.json'; a.click();
+  URL.revokeObjectURL(a.href);
+};
+$('importar').onclick = () => $('archivo').click();
+$('archivo').onchange = async ev => {
+  const file = ev.target.files[0]; if (!file) return;
+  try {
+    const arr = JSON.parse(await file.text());
+    if (!Array.isArray(arr)) throw 0;
+    arr.forEach(e => { if (e && e.id && e.titulo) upsert(e); });
+  } catch { alert('El archivo no es un JSON válido de entradas.'); }
+  ev.target.value = '';
+};
+
+$('tema').onclick = () => {
+  const r = document.documentElement;
+  const dark = r.dataset.theme ? r.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme = dark ? 'light' : 'dark';
+  try { localStorage.setItem('adolfo-log-theme', r.dataset.theme); } catch {}
+};
+try { const t = localStorage.getItem('adolfo-log-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+
+cargar();
+</script>
+</body>
+</html>

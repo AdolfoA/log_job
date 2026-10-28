@@ -1,0 +1,68 @@
+[
+  {
+    "id": "2026-10-27-001",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Modelo costo agua]",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Completar df_C con puestos faltantes de df_A_volumen",
+    "resumen": "Los puestos que están en df_A_volumen y no en df_C (en SP00: el 2001) se agregan a df_C con Monto_Moneda_Local = 0, una fila por cada mes y cada Tipo_GF_GV_LD existente en df_C. El resto de columnas se copia de df_C. El bloque va después de crear df_C y antes de su uso (celda 9, GEN 1: GENERAR DATAFRAMES BASES).",
+    "detalle": "KEYS = Año, Versión_de_simulación, Codigo_de_Centro_Productivo_codigo_de_planta\nfaltantes = left_anti(A.puestos, C.puestos) por KEYS\nnuevas = faltantes x meses(C) x tipos(C) con monto 0\ndf_C = df_C_orig.unionByName(nuevas)\n\nResultado esperado con SP00: 1 puesto x 12 meses x 2 tipos (GF_MAQ, GF_MO) = 24 filas.",
+    "tags": ["df_C", "PySpark", "SP00"]
+  },
+  {
+    "id": "2026-10-27-002",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Modelo costo agua]",
+    "tipo": "Consulta",
+    "estado": "Hecho",
+    "titulo": "Error AMBIGUOUS_REFERENCE en Periodo_Mes",
+    "resumen": "La lista 'otras' comparaba nombres de columna distinguiendo mayúsculas (Python), por lo que Periodo_Mes quedaba duplicada en 'nuevas'. Spark no distingue mayúsculas, pero Python sí. Se resolvieron los nombres reales de df_C con un diccionario en minúsculas.",
+    "detalle": "_n = {c.lower(): c for c in df_C.columns}\n_excluir = {c.lower() for c in KEYS + [PUESTO, MES, TIPO, MONTO, CECO]}\notras = [c for c in df_C_orig.columns if c.lower() not in _excluir]",
+    "tags": ["df_C", "error", "mayúsculas"]
+  },
+  {
+    "id": "2026-10-27-003",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Modelo costo agua]",
+    "tipo": "Pendiente",
+    "estado": "Abierto",
+    "titulo": "El except de df_E sobrescribe df_C y pierde las filas agregadas",
+    "resumen": "En el bloque except de df_E se ejecuta df_C = spark_dfs[\"C_Gastos_Plan_CP\"], que reemplaza df_C por el original crudo. Cambiar a df_C_periodos = df_C.select(...) sin reasignar df_C.",
+    "detalle": "",
+    "tags": ["df_C", "df_E", "riesgo"]
+  },
+  {
+    "id": "2026-10-27-004",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Modelo costo agua]",
+    "tipo": "Pendiente",
+    "estado": "Abierto",
+    "titulo": "Definir el CECO del puesto 2001",
+    "resumen": "En el Excel el CECO es único por puesto, no por mes. El puesto 2001 no tiene CECO propio en df_C; el código toma el menor CECO del mes. Más abajo (línea 374) el CECO se vacía de todos modos, así que no afecta el resultado actual.",
+    "detalle": "",
+    "tags": ["df_C", "CECO"]
+  },
+  {
+    "id": "2026-10-27-005",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Modelo costo agua]",
+    "tipo": "Hallazgo",
+    "estado": "Abierto",
+    "titulo": "Account key de Azure Storage en texto plano (celda 4)",
+    "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo.",
+    "detalle": "",
+    "tags": ["seguridad", "Azure"]
+  },
+  {
+    "id": "2026-10-27-006",
+    "fecha": "2026-10-27",
+    "chat": "Adolfo [Pipeline ADF]",
+    "tipo": "Consulta",
+    "estado": "Hecho",
+    "titulo": "Qué es el pipeline Listar_Contenido_Final + ForEach_Archivos",
+    "resumen": "Pipeline de Azure Data Factory: una actividad Web lista el contenido de una carpeta y un ForEach recorre los elementos; dentro, Validar_Si_Es_Archivo filtra archivos de carpetas. Secuencial desmarcado = iteraciones en paralelo.",
+    "detalle": "",
+    "tags": ["ADF", "pipeline"]
+  }
+]
