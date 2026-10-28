@@ -29,6 +29,9 @@ button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .chip.on{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .entry{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
 .entry.open-state{border-left:3px solid var(--warn)}
+.entry.resolved-state{border-left:3px solid var(--acc)}
+.e-Abierto{color:var(--warn);border-color:var(--warn)}
+.e-Resuelto{color:var(--acc);border-color:var(--acc);font-weight:600}
 .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font:12px ui-monospace,Consolas,monospace;color:var(--mute);margin-bottom:6px}
 .badge{border:1px solid var(--line);border-radius:6px;padding:1px 8px}
 .t-Cambio{color:var(--acc)}.t-Consulta{color:var(--info)}.t-Pendiente{color:var(--warn)}.t-Hallazgo{color:var(--bad)}.t-Decisión{color:#a78bfa}
@@ -71,6 +74,7 @@ dialog textarea{min-height:90px;resize:vertical}
       <select id="orden"><option value="cat">Por categoría</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
     </div>
     <div class="chips" id="cats"></div>
+    <div class="chips" id="estados"></div>
     <div class="chips" id="chats"></div>
     <div class="chips" id="tipos"></div>
   </div>
@@ -89,7 +93,7 @@ dialog textarea{min-height:90px;resize:vertical}
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
       <label>Fecha<input type="date" name="fecha" required></label>
       <label>Tipo<select name="tipo"><option>Cambio</option><option>Consulta</option><option>Pendiente</option><option>Hallazgo</option><option>Decisión</option></select></label>
-      <label>Estado<select name="estado"><option>Hecho</option><option>Abierto</option></select></label>
+      <label>Estado<select name="estado"><option>Hecho</option><option>Abierto</option><option>Resuelto</option></select></label>
     </div>
     <label>Título<input name="titulo" required></label>
     <label>Resumen<textarea name="resumen" required></textarea></label>
@@ -106,7 +110,7 @@ dialog textarea{min-height:90px;resize:vertical}
 const LS = 'adolfo-log-local-v1';
 let base = [];            // entradas del repo (data/entries.json)
 let locales = [];         // entradas creadas/editadas en este navegador
-let filtro = {chat:'', tipo:'', categoria:'', q:'', orden:'cat'};
+let filtro = {chat:'', tipo:'', categoria:'', estado:'', q:'', orden:'cat'};
 let editando = null;
 
 const $ = id => document.getElementById(id);
@@ -149,6 +153,7 @@ function render(){
   const tiposU = [...new Set(data.map(e => e.tipo))].sort();
   const catsU = [...new Set(data.map(e => e.categoria || 'Sin categoría'))].sort();
   chips($('cats'), catsU, 'categoria');
+  chips($('estados'), ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)), 'estado');
   chips($('chats'), chatsU, 'chat');
   $('catsList').replaceChildren(...catsU.map(c => { const o = el('option'); o.value = c; return o; }));
   chips($('tipos'), tiposU, 'tipo');
@@ -158,6 +163,7 @@ function render(){
   let vis = data.filter(e =>
     (!filtro.chat || e.chat === filtro.chat) &&
     (!filtro.tipo || e.tipo === filtro.tipo) &&
+    (!filtro.estado || e.estado === filtro.estado) &&
     (!filtro.categoria || (e.categoria || 'Sin categoría') === filtro.categoria) &&
     (!q || [e.titulo, e.resumen, e.detalle, (e.tags||[]).join(' '), e.chat].join(' ').toLowerCase().includes(q))
   ).sort((a,b) => filtro.orden === 'cat'
@@ -165,7 +171,7 @@ function render(){
     : (a.fecha + a.id).localeCompare(b.fecha + b.id) * (filtro.orden === 'asc' ? 1 : -1));
 
   const st = $('stats'); st.replaceChildren();
-  [['Entradas', data.length], ['Chats', chatsU.length], ['Abiertas', data.filter(e => e.estado === 'Abierto').length], ['Mostrando', vis.length]]
+  [['Entradas', data.length], ['Chats', chatsU.length], ['Abiertas', data.filter(e => e.estado === 'Abierto').length], ['Resueltas', data.filter(e => e.estado === 'Resuelto').length], ['Mostrando', vis.length]]
     .forEach(([k,v]) => { const s = el('span','stat', k + ' '); const b = el('b', null, v); s.append(b); st.append(s); });
 
   const L = $('lista'); L.replaceChildren();
@@ -173,16 +179,16 @@ function render(){
   let ultimaCat = null;
   vis.forEach(e => {
     if (filtro.orden === 'cat' && (e.categoria||'Sin categoría') !== ultimaCat){ ultimaCat = e.categoria||'Sin categoría'; L.append(el('h2','grupo', ultimaCat)); }
-    const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : ''));
+    const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : e.estado === 'Resuelto' ? ' resolved-state' : ''));
     const m = el('div','meta');
-    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span','badge',e.categoria||'Sin categoría'), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span',null,'· '+e.estado));
+    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span','badge',e.categoria||'Sin categoría'), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span','badge e-'+e.estado, (e.estado === 'Resuelto' ? '✓ ' : '') + e.estado));
     c.append(m, el('h3',null,e.titulo), el('p',null,e.resumen));
     if (e.detalle){ const d = el('details'); d.append(el('summary',null,'Ver detalle / código'), el('pre',null,e.detalle)); c.append(d); }
     if ((e.tags||[]).length){ const t = el('div','tags'); e.tags.forEach(x => t.append(el('span','tag','#'+x))); c.append(t); }
     const a = el('div','actions');
     const be = el('button',null,'Editar'); be.onclick = () => abrir(e);
-    const bs = el('button',null, e.estado === 'Abierto' ? 'Marcar hecho' : 'Reabrir');
-    bs.onclick = () => { upsert({...e, estado: e.estado === 'Abierto' ? 'Hecho' : 'Abierto'}); };
+    const bs = el('button',null, e.estado === 'Abierto' ? 'Marcar resuelto' : 'Reabrir');
+    bs.onclick = () => { upsert({...e, estado: e.estado === 'Abierto' ? 'Resuelto' : 'Abierto'}); };
     const bd = el('button',null,'Borrar'); bd.onclick = () => { if (confirm('¿Borrar esta entrada?')) upsert({...e, _borrada:true}); };
     a.append(be, bs, bd); c.append(a);
     L.append(c);
