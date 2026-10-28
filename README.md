@@ -9,6 +9,7 @@ Página estática (HTML + JSON, sin dependencias) para registrar consultas y cam
 
 ## Cómo se registra
 - Las entradas del repo viven en `data/entries.json`.
+- La pestaña **Código** lee el repo privado `AdolfoA/CBC` (ramas, carpetas y versiones) con un token de solo lectura que se pega en el navegador.
 - En la página, "+ Nueva entrada" guarda en este navegador. "Exportar JSON" descarga el archivo completo para reemplazar `data/entries.json` y hacer commit.
 - En cada chat puedes pedirme "registra este cambio" y te entrego la entrada lista para pegar en `data/entries.json`.
 
