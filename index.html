@@ -40,6 +40,7 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .tag{font:11px ui-monospace,Consolas,monospace;color:var(--mute)}
 .actions{display:flex;gap:6px;margin-top:10px}
 .actions button{padding:3px 10px;font-size:12px}
+.grupo{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:22px 0 8px;font-family:ui-monospace,Consolas,monospace}
 .empty{text-align:center;color:var(--mute);padding:40px 0}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
 dialog::backdrop{background:#0009}
@@ -67,8 +68,9 @@ dialog textarea{min-height:90px;resize:vertical}
   <div class="filters">
     <div class="row">
       <input type="search" id="buscar" placeholder="Buscar en título, resumen, código o tags…">
-      <select id="orden"><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
+      <select id="orden"><option value="cat">Por categoría</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
     </div>
+    <div class="chips" id="cats"></div>
     <div class="chips" id="chats"></div>
     <div class="chips" id="tipos"></div>
   </div>
@@ -80,6 +82,8 @@ dialog textarea{min-height:90px;resize:vertical}
 <dialog id="dlg">
   <form method="dialog" id="form">
     <h2 style="margin:0" id="dlgTitulo">Nueva entrada</h2>
+    <label>Categoría<input name="categoria" list="catsList" placeholder="Modelo de costos" required></label>
+    <datalist id="catsList"></datalist>
     <label>Chat<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]" required></label>
     <datalist id="chatsList"></datalist>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
@@ -102,7 +106,7 @@ dialog textarea{min-height:90px;resize:vertical}
 const LS = 'adolfo-log-local-v1';
 let base = [];            // entradas del repo (data/entries.json)
 let locales = [];         // entradas creadas/editadas en este navegador
-let filtro = {chat:'', tipo:'', q:'', orden:'desc'};
+let filtro = {chat:'', tipo:'', categoria:'', q:'', orden:'cat'};
 let editando = null;
 
 const $ = id => document.getElementById(id);
@@ -143,7 +147,10 @@ function render(){
   const data = todas();
   const chatsU = [...new Set(data.map(e => e.chat))].sort();
   const tiposU = [...new Set(data.map(e => e.tipo))].sort();
+  const catsU = [...new Set(data.map(e => e.categoria || 'Sin categoría'))].sort();
+  chips($('cats'), catsU, 'categoria');
   chips($('chats'), chatsU, 'chat');
+  $('catsList').replaceChildren(...catsU.map(c => { const o = el('option'); o.value = c; return o; }));
   chips($('tipos'), tiposU, 'tipo');
   $('chatsList').replaceChildren(...chatsU.map(c => { const o = el('option'); o.value = c; return o; }));
 
@@ -151,8 +158,11 @@ function render(){
   let vis = data.filter(e =>
     (!filtro.chat || e.chat === filtro.chat) &&
     (!filtro.tipo || e.tipo === filtro.tipo) &&
+    (!filtro.categoria || (e.categoria || 'Sin categoría') === filtro.categoria) &&
     (!q || [e.titulo, e.resumen, e.detalle, (e.tags||[]).join(' '), e.chat].join(' ').toLowerCase().includes(q))
-  ).sort((a,b) => (a.fecha + a.id).localeCompare(b.fecha + b.id) * (filtro.orden === 'asc' ? 1 : -1));
+  ).sort((a,b) => filtro.orden === 'cat'
+    ? (a.categoria||'Sin categoría').localeCompare(b.categoria||'Sin categoría') || (b.fecha + b.id).localeCompare(a.fecha + a.id)
+    : (a.fecha + a.id).localeCompare(b.fecha + b.id) * (filtro.orden === 'asc' ? 1 : -1));
 
   const st = $('stats'); st.replaceChildren();
   [['Entradas', data.length], ['Chats', chatsU.length], ['Abiertas', data.filter(e => e.estado === 'Abierto').length], ['Mostrando', vis.length]]
@@ -160,10 +170,12 @@ function render(){
 
   const L = $('lista'); L.replaceChildren();
   if (!vis.length){ L.append(el('div','empty','Sin entradas para este filtro.')); return; }
+  let ultimaCat = null;
   vis.forEach(e => {
+    if (filtro.orden === 'cat' && (e.categoria||'Sin categoría') !== ultimaCat){ ultimaCat = e.categoria||'Sin categoría'; L.append(el('h2','grupo', ultimaCat)); }
     const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : ''));
     const m = el('div','meta');
-    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span',null,'· '+e.estado));
+    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span','badge',e.categoria||'Sin categoría'), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span',null,'· '+e.estado));
     c.append(m, el('h3',null,e.titulo), el('p',null,e.resumen));
     if (e.detalle){ const d = el('details'); d.append(el('summary',null,'Ver detalle / código'), el('pre',null,e.detalle)); c.append(d); }
     if ((e.tags||[]).length){ const t = el('div','tags'); e.tags.forEach(x => t.append(el('span','tag','#'+x))); c.append(t); }
@@ -195,8 +207,8 @@ function abrir(e){
   editando = e || null;
   const f = $('form'); f.reset();
   $('dlgTitulo').textContent = e ? 'Editar entrada' : 'Nueva entrada';
-  const v = e || {fecha: new Date().toISOString().slice(0,10), chat: filtro.chat, tipo:'Cambio', estado:'Hecho', tags:[]};
-  ['chat','fecha','tipo','estado','titulo','resumen','detalle'].forEach(k => f.elements[k].value = v[k] || '');
+  const v = e || {categoria: filtro.categoria, fecha: new Date().toISOString().slice(0,10), chat: filtro.chat, tipo:'Cambio', estado:'Hecho', tags:[]};
+  ['chat','categoria','fecha','tipo','estado','titulo','resumen','detalle'].forEach(k => f.elements[k].value = v[k] || '');
   f.elements.tags.value = (v.tags||[]).join(', ');
   $('dlg').showModal();
 }
@@ -205,7 +217,7 @@ $('form').addEventListener('submit', ev => {
   const f = ev.target.elements;
   const e = {
     id: editando ? editando.id : nuevoId(f.fecha.value),
-    fecha: f.fecha.value, chat: f.chat.value.trim(), tipo: f.tipo.value, estado: f.estado.value,
+    fecha: f.fecha.value, chat: f.chat.value.trim(), categoria: f.categoria.value.trim(), tipo: f.tipo.value, estado: f.estado.value,
     titulo: f.titulo.value.trim(), resumen: f.resumen.value.trim(), detalle: f.detalle.value,
     tags: f.tags.value.split(',').map(s => s.trim()).filter(Boolean)
   };

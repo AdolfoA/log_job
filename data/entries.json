@@ -8,7 +8,12 @@
     "titulo": "Completar df_C con puestos faltantes de df_A_volumen",
     "resumen": "Los puestos que están en df_A_volumen y no en df_C (en SP00: el 2001) se agregan a df_C con Monto_Moneda_Local = 0, una fila por cada mes y cada Tipo_GF_GV_LD existente en df_C. El resto de columnas se copia de df_C. El bloque va después de crear df_C y antes de su uso (celda 9, GEN 1: GENERAR DATAFRAMES BASES).",
     "detalle": "KEYS = Año, Versión_de_simulación, Codigo_de_Centro_Productivo_codigo_de_planta\nfaltantes = left_anti(A.puestos, C.puestos) por KEYS\nnuevas = faltantes x meses(C) x tipos(C) con monto 0\ndf_C = df_C_orig.unionByName(nuevas)\n\nResultado esperado con SP00: 1 puesto x 12 meses x 2 tipos (GF_MAQ, GF_MO) = 24 filas.",
-    "tags": ["df_C", "PySpark", "SP00"]
+    "tags": [
+      "df_C",
+      "PySpark",
+      "SP00"
+    ],
+    "categoria": "Modelo de costos"
   },
   {
     "id": "2026-10-27-002",
@@ -19,7 +24,12 @@
     "titulo": "Error AMBIGUOUS_REFERENCE en Periodo_Mes",
     "resumen": "La lista 'otras' comparaba nombres de columna distinguiendo mayúsculas (Python), por lo que Periodo_Mes quedaba duplicada en 'nuevas'. Spark no distingue mayúsculas, pero Python sí. Se resolvieron los nombres reales de df_C con un diccionario en minúsculas.",
     "detalle": "_n = {c.lower(): c for c in df_C.columns}\n_excluir = {c.lower() for c in KEYS + [PUESTO, MES, TIPO, MONTO, CECO]}\notras = [c for c in df_C_orig.columns if c.lower() not in _excluir]",
-    "tags": ["df_C", "error", "mayúsculas"]
+    "tags": [
+      "df_C",
+      "error",
+      "mayúsculas"
+    ],
+    "categoria": "Modelo de costos"
   },
   {
     "id": "2026-10-27-003",
@@ -30,7 +40,12 @@
     "titulo": "El except de df_E sobrescribe df_C y pierde las filas agregadas",
     "resumen": "En el bloque except de df_E se ejecuta df_C = spark_dfs[\"C_Gastos_Plan_CP\"], que reemplaza df_C por el original crudo. Cambiar a df_C_periodos = df_C.select(...) sin reasignar df_C.",
     "detalle": "",
-    "tags": ["df_C", "df_E", "riesgo"]
+    "tags": [
+      "df_C",
+      "df_E",
+      "riesgo"
+    ],
+    "categoria": "Modelo de costos"
   },
   {
     "id": "2026-10-27-004",
@@ -41,7 +56,11 @@
     "titulo": "Definir el CECO del puesto 2001",
     "resumen": "En el Excel el CECO es único por puesto, no por mes. El puesto 2001 no tiene CECO propio en df_C; el código toma el menor CECO del mes. Más abajo (línea 374) el CECO se vacía de todos modos, así que no afecta el resultado actual.",
     "detalle": "",
-    "tags": ["df_C", "CECO"]
+    "tags": [
+      "df_C",
+      "CECO"
+    ],
+    "categoria": "Modelo de costos"
   },
   {
     "id": "2026-10-27-005",
@@ -52,7 +71,11 @@
     "titulo": "Account key de Azure Storage en texto plano (celda 4)",
     "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo.",
     "detalle": "",
-    "tags": ["seguridad", "Azure"]
+    "tags": [
+      "seguridad",
+      "Azure"
+    ],
+    "categoria": "Seguridad"
   },
   {
     "id": "2026-10-27-006",
@@ -63,6 +86,155 @@
     "titulo": "Qué es el pipeline Listar_Contenido_Final + ForEach_Archivos",
     "resumen": "Pipeline de Azure Data Factory: una actividad Web lista el contenido de una carpeta y un ForEach recorre los elementos; dentro, Validar_Si_Es_Archivo filtra archivos de carpetas. Secuencial desmarcado = iteraciones en paralelo.",
     "detalle": "",
-    "tags": ["ADF", "pipeline"]
+    "tags": [
+      "ADF",
+      "pipeline"
+    ],
+    "categoria": "Pipeline / Spark"
+  },
+  {
+    "id": "2026-10-19-001",
+    "fecha": "2026-10-19",
+    "chat": "Adolfo Claude",
+    "categoria": "Claude / Agentes",
+    "tipo": "Consulta",
+    "estado": "Hecho",
+    "titulo": "Guía técnica para tareas con varios agentes (app Claude Pro y Claude Code)",
+    "resumen": "Se verificó en la documentación oficial cómo funcionan los subagentes en Claude Code y las capacidades multiagente en la app, y se entregó una guía en Word (.docx) en español con patrones, pasos, ejemplos y comparación entre ambas versiones.",
+    "detalle": "",
+    "tags": [
+      "agentes",
+      "Claude Code",
+      "guía"
+    ]
+  },
+  {
+    "id": "2026-10-19-002",
+    "fecha": "2026-10-19",
+    "chat": "Adolfo Claude",
+    "categoria": "Git",
+    "tipo": "Consulta",
+    "estado": "Hecho",
+    "titulo": "Guía de Git con diagramas y fechas de creación/documentación",
+    "resumen": "Guía con nueve diagramas (incluido uno de conflictos). El usuario pidió agregar la fecha de creación y la fecha de la documentación o gif de referencia; se verificó la versión estable de Git y la edición de Pro Git en git-scm.com. Se corrigieron dos diagramas: la etiqueta HEAD cortada y el de las cuatro zonas con textos amontonados. La fecha exacta de este tramo no consta en el resumen del chat; se ubicó entre el 19 y el 26 de octubre.",
+    "detalle": "",
+    "tags": [
+      "Git",
+      "diagramas",
+      "documentación"
+    ]
+  },
+  {
+    "id": "2026-10-20-001",
+    "fecha": "2026-10-20",
+    "chat": "Adolfo Claude",
+    "categoria": "Documentación",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Revisión de estilo del documento «Modelo Costos Plan Cascadeo – Databricks» (v1.31 a v1.4)",
+    "resumen": "Se pidió un estilo impersonal tipo tesis, sin primera persona (ej. «En esta etapa se filtran los semiterminados cuya producción es igual a cero…»). Se revisó el Word, se aplicaron correcciones con control de cambios y se generó la versión 1.4 con fila nueva en el historial de versiones. Fecha aproximada: entre el 19 y el 26 de octubre.",
+    "detalle": "",
+    "tags": [
+      "Word",
+      "estilo",
+      "v1.4"
+    ]
+  },
+  {
+    "id": "2026-10-20-002",
+    "fecha": "2026-10-20",
+    "chat": "Adolfo Claude",
+    "categoria": "Documentación",
+    "tipo": "Pendiente",
+    "estado": "Abierto",
+    "titulo": "Confirmar tres puntos del documento v1.4",
+    "resumen": "Quedaron por definir: la fórmula correcta de LM_RENDIMIENTO, el significado de JT y el nombre correcto del Lakehouse. El documento quedó con comentarios en esos puntos.",
+    "detalle": "",
+    "tags": [
+      "LM_RENDIMIENTO",
+      "JT",
+      "Lakehouse"
+    ]
+  },
+  {
+    "id": "2026-10-22-001",
+    "fecha": "2026-10-22",
+    "chat": "Adolfo Claude",
+    "categoria": "Pipeline / Spark",
+    "tipo": "Consulta",
+    "estado": "Hecho",
+    "titulo": "Diagnóstico de falla de un pipeline ejecutado por ADF (Spark)",
+    "resumen": "Orientación para hallar la causa real: celda en rojo, líneas «Caused by:» y Spark UI. Causas habituales: falta de memoria, Excel dañado o vacío, columna con tipo o nombre distinto, nodo caído, tabla Delta modificada en paralelo. Más workers o más memoria solo ayudan con OutOfMemoryError o ExecutorLostFailure. Posible mal diseño: leer Excel con openpyxl o pandas en el driver (la memoria que importa es la del driver). Fecha aproximada.",
+    "detalle": "",
+    "tags": [
+      "ADF",
+      "Spark",
+      "memoria",
+      "openpyxl"
+    ]
+  },
+  {
+    "id": "2026-10-26-001",
+    "fecha": "2026-10-26",
+    "chat": "Adolfo Claude",
+    "categoria": "Modelo de costos",
+    "tipo": "Consulta",
+    "estado": "Abierto",
+    "titulo": "Validar GF_MO y GF_MAQ del puesto 6403, mes 1, centro RP04",
+    "resumen": "Valores esperados: GF_MO = 140.470,51 y GF_MAQ = 108.980,67. La verificación de la celda 99 no filtraba por mes (agrupaba todos los meses), por eso 299.519 no era comparable con 108.980. Se dieron dos consultas, una sobre df_costos_plan y otra sobre df_C, para comparar mes contra mes. Falta que el usuario pegue los resultados para decidir si el gasto queda en otro puesto, se pierde en el cálculo o si el error era solo de la verificación.",
+    "detalle": "(df_costos_plan\n  .filter((col(\"CENTRO\")==\"RP04\") & (col(\"MES\").isin(\"1\",\"01\")) &\n          (col(\"0PIOBJSV\")==\"0ATY\") & (col(\"CLASIFICACION\")==\"CP\") &\n          (col(\"COMPONENTE\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(\"PUESTO_TRABAJO\",\"COMPONENTE\")\n  .agg(sum(\"COSTO_TOTAL\").alias(\"DISTRIBUIDO\"))\n  .orderBy(\"PUESTO_TRABAJO\",\"COMPONENTE\").display())\n\n(df_C.filter((col(\"Codigo_de_Centro_Productivo_codigo_de_planta\")==\"RP04\") &\n             (col(\"Periodo_Mes\").isin(\"1\",\"01\")) &\n             (col(\"Tipo_GF_GV_LD\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(col(\"Codigo_de_Puesto_de_Trabajo\").alias(\"PUESTO\"), \"Tipo_GF_GV_LD\")\n  .agg(sum(\"Monto_Moneda_Local\").alias(\"EN_HOJA_C\"))\n  .orderBy(\"PUESTO\",\"Tipo_GF_GV_LD\").display())",
+    "tags": [
+      "RP04",
+      "6403",
+      "GF_MO",
+      "GF_MAQ"
+    ]
+  },
+  {
+    "id": "2026-10-26-002",
+    "fecha": "2026-10-26",
+    "chat": "Adolfo Ocio",
+    "categoria": "Juegos",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Battle City original en vista superior (HTML)",
+    "resumen": "Se eligió el estilo Battle City (no Super Battle Tank). Juego original, sin copiar gráficos: base con águila, ladrillos y acero, oleadas de tanques enemigos, niveles y power-ups (estrella, casco, reloj, pala, granada, vida), con control táctil.",
+    "detalle": "",
+    "tags": [
+      "juego",
+      "HTML",
+      "Battle City"
+    ]
+  },
+  {
+    "id": "2026-10-26-003",
+    "fecha": "2026-10-26",
+    "chat": "Adolfo Ocio",
+    "categoria": "Juegos",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Contenedor nginx (Docker) para servir el juego localmente",
+    "resumen": "Imagen nginx ligera que sirve el juego desde la máquina del usuario, con reinicio automático y un README que explica cómo activar un volumen para editar sin reconstruir. Las tipografías vienen de Google Fonts; sin internet el juego funciona igual. Siguiente paso ofrecido: separar en HTML, CSS y JS o agregar modo de dos jugadores.",
+    "detalle": "",
+    "tags": [
+      "Docker",
+      "nginx"
+    ]
+  },
+  {
+    "id": "2026-10-26-004",
+    "fecha": "2026-10-26",
+    "chat": "Adolfo Ocio",
+    "categoria": "Juegos",
+    "tipo": "Pendiente",
+    "estado": "Abierto",
+    "titulo": "Instalar WSL 2 para luego Docker Desktop",
+    "resumen": "Pasos dados: comprobar versión de Windows (winver), virtualización habilitada, abrir PowerShell como administrador, ejecutar wsl --install, reiniciar, crear usuario de Ubuntu y verificar con wsl -l -v que la versión sea 2. Falta que el usuario reporte el resultado para seguir con Docker Desktop.",
+    "detalle": "",
+    "tags": [
+      "WSL2",
+      "Docker Desktop",
+      "Windows"
+    ]
   }
 ]
