@@ -44,6 +44,32 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .actions{display:flex;gap:6px;margin-top:10px}
 .actions button{padding:3px 10px;font-size:12px}
 .grupo{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:22px 0 8px;font-family:ui-monospace,Consolas,monospace}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--mute);cursor:pointer}
+.tab.on{color:var(--text);border-bottom-color:var(--acc)}
+.code-wrap{display:grid;grid-template-columns:230px 1fr;gap:12px;margin-top:12px}
+@media (max-width:760px){.code-wrap{grid-template-columns:1fr}}
+.filelist{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;align-self:start;max-height:70vh;overflow:auto}
+.fbtn{display:block;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:5px 8px;font:12.5px ui-monospace,Consolas,monospace;color:var(--mute);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbtn:hover{background:var(--panel2);color:var(--text)}
+.fbtn.on{background:var(--acc2);color:#fff}
+.viewer{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0}
+.vbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
+.vbar .path{font:13px ui-monospace,Consolas,monospace;flex:1 1 100%;word-break:break-all}
+.vbar select{max-width:100%;flex:1 1 220px;font-size:13px}
+.vbar button,.vbar a{font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:8px;color:var(--text);text-decoration:none;background:var(--panel)}
+.vinfo{font:12px ui-monospace,Consolas,monospace;color:var(--mute);padding:6px 10px}
+.code{overflow:auto;max-height:70vh;font:12.5px/1.55 ui-monospace,Consolas,monospace;padding:6px 0}
+.cl{display:flex;white-space:pre;min-width:max-content}
+.cl .ln{flex:0 0 52px;text-align:right;padding-right:10px;color:var(--mute);user-select:none}
+.cl .tx{padding-right:14px}
+.cl.add{background:#10b98122}.cl.add .tx::before{content:'+ ';color:var(--acc)}
+.cl.del{background:#ef444422}.cl.del .tx::before{content:'- ';color:var(--bad)}
+.cl.ctx .tx::before{content:'  '}
+.vmsg{padding:24px;text-align:center;color:var(--mute)}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
+.chk input{padding:0}
 .empty{text-align:center;color:var(--mute);padding:40px 0}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
 dialog::backdrop{background:#0009}
@@ -66,6 +92,12 @@ dialog textarea{min-height:90px;resize:vertical}
     </div>
   </header>
 
+  <div class="tabs">
+    <button class="tab on" id="tabLog">Bitácora</button>
+    <button class="tab" id="tabCodigo">Código</button>
+  </div>
+
+  <div id="vistaLog">
   <div class="stats" id="stats"></div>
 
   <div class="filters">
@@ -81,6 +113,27 @@ dialog textarea{min-height:90px;resize:vertical}
 
   <div id="lista"></div>
   <p class="note" id="nota"></p>
+  </div>
+
+  <div id="vistaCodigo" hidden>
+    <div class="chips" id="proyectos"></div>
+    <div class="code-wrap">
+      <div class="filelist" id="archivos"></div>
+      <div class="viewer">
+        <div class="vbar" id="vbar" hidden>
+          <div class="path" id="vpath"></div>
+          <select id="vversion" aria-label="Versión"></select>
+          <label class="chk"><input type="checkbox" id="vdiff"> Ver cambios</label>
+          <button id="vcopiar">Copiar</button>
+          <a id="vgh" target="_blank" rel="noopener">Ver en GitHub</a>
+          <a id="vhist" target="_blank" rel="noopener">Historial</a>
+        </div>
+        <div class="vinfo" id="vinfo" hidden></div>
+        <div class="code" id="vcode"><div class="vmsg">Elige un proyecto y un archivo.</div></div>
+      </div>
+    </div>
+    <p class="note">Lee la carpeta <code>proyectos/</code> del repo usando la API pública de GitHub (límite de 60 consultas por hora por IP; se guarda en caché 5 minutos).</p>
+  </div>
 </div>
 
 <dialog id="dlg">
@@ -258,6 +311,159 @@ $('tema').onclick = () => {
   try { localStorage.setItem('adolfo-log-theme', r.dataset.theme); } catch {}
 };
 try { const t = localStorage.getItem('adolfo-log-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+
+
+/* ---------- Visor de código ---------- */
+const CFG = (() => {
+  const m = location.hostname.match(/^(.+)\.github\.io$/);
+  const repo = location.pathname.split('/')[1];
+  return {owner: m ? m[1] : 'AdolfoA', repo: m && repo ? repo : 'log_job', branch: 'main', root: 'proyectos'};
+})();
+const cache = {
+  get(k){ try { const v = JSON.parse(sessionStorage.getItem('gh:'+k)); if (v && Date.now() - v.t < 300000) return v.d; } catch {} return null; },
+  set(k,d){ try { sessionStorage.setItem('gh:'+k, JSON.stringify({t:Date.now(), d})); } catch {} }
+};
+async function ghApi(path){
+  const c = cache.get('api'+path); if (c) return c;
+  const r = await fetch('https://api.github.com/repos/'+CFG.owner+'/'+CFG.repo+path, {headers:{Accept:'application/vnd.github+json'}});
+  if (r.status === 403 || r.status === 429){
+    const rs = r.headers.get('x-ratelimit-reset');
+    throw new Error('Se alcanzó el límite de la API de GitHub' + (rs ? '; se restablece a las ' + new Date(rs*1000).toLocaleTimeString() : '') + '.');
+  }
+  if (!r.ok) throw new Error('GitHub respondió ' + r.status + '.');
+  const d = await r.json(); cache.set('api'+path, d); return d;
+}
+async function rawFile(ref, path){
+  const c = cache.get('raw'+ref+path); if (c !== null) return c;
+  const r = await fetch('https://raw.githubusercontent.com/'+CFG.owner+'/'+CFG.repo+'/'+ref+'/'+path.split('/').map(encodeURIComponent).join('/'));
+  if (!r.ok) throw new Error('No se pudo leer el archivo (' + r.status + ').');
+  const t = await r.text(); cache.set('raw'+ref+path, t); return t;
+}
+
+const code = {tree:null, proyecto:'', archivo:'', commits:[], idx:0};
+const msg = t => { const d = el('div','vmsg',t); $('vcode').replaceChildren(d); };
+
+function diffLines(a, b){
+  const n = a.length, m = b.length;
+  const L = Array.from({length: n+1}, () => new Int32Array(m+1));
+  for (let i = n-1; i >= 0; i--) for (let j = m-1; j >= 0; j--)
+    L[i][j] = a[i] === b[j] ? L[i+1][j+1] + 1 : Math.max(L[i+1][j], L[i][j+1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m){
+    if (a[i] === b[j]){ out.push({k:'ctx', t:b[j]}); i++; j++; }
+    else if (L[i+1][j] >= L[i][j+1]){ out.push({k:'del', t:a[i]}); i++; }
+    else { out.push({k:'add', t:b[j]}); j++; }
+  }
+  while (i < n) out.push({k:'del', t:a[i++]});
+  while (j < m) out.push({k:'add', t:b[j++]});
+  return out;
+}
+
+async function cargarArbol(){
+  if (code.tree) return;
+  msg('Cargando proyectos…');
+  try {
+    const d = await ghApi('/git/trees/' + CFG.branch + '?recursive=1');
+    const pre = CFG.root + '/';
+    const map = {};
+    d.tree.filter(x => x.type === 'blob' && x.path.startsWith(pre) && !x.path.endsWith('.gitkeep')).forEach(x => {
+      const rest = x.path.slice(pre.length), i = rest.indexOf('/');
+      if (i < 0) return;
+      (map[rest.slice(0,i)] = map[rest.slice(0,i)] || []).push({full: x.path, rel: rest.slice(i+1), size: x.size});
+    });
+    code.tree = map;
+    renderProyectos();
+    const nombres = Object.keys(map).sort();
+    if (!nombres.length){ msg('Aún no hay proyectos. Crea una carpeta dentro de "proyectos/" en el repo.'); return; }
+    seleccionarProyecto(code.proyecto && map[code.proyecto] ? code.proyecto : nombres[0]);
+  } catch (e) { msg(e.message); }
+}
+function renderProyectos(){
+  const c = $('proyectos'); c.replaceChildren();
+  Object.keys(code.tree).sort().forEach(n => {
+    const ch = el('span','chip' + (code.proyecto === n ? ' on' : ''), n);
+    ch.onclick = () => seleccionarProyecto(n);
+    c.append(ch);
+  });
+}
+function seleccionarProyecto(n){
+  code.proyecto = n; code.archivo = ''; renderProyectos();
+  $('vbar').hidden = true; $('vinfo').hidden = true;
+  const L = $('archivos'); L.replaceChildren();
+  const files = code.tree[n].slice().sort((a,b) => a.rel.localeCompare(b.rel));
+  files.forEach(f => {
+    const b = el('button','fbtn', f.rel); b.title = f.rel; b.dataset.full = f.full;
+    b.onclick = () => abrirArchivo(f);
+    L.append(b);
+  });
+  const first = files.find(f => /readme/i.test(f.rel)) || files[0];
+  if (first) abrirArchivo(first); else msg('Esta carpeta está vacía.');
+}
+async function abrirArchivo(f){
+  code.archivo = f.full;
+  document.querySelectorAll('.fbtn').forEach(b => b.classList.toggle('on', b.dataset.full === f.full));
+  msg('Cargando versiones…');
+  try {
+    code.commits = await ghApi('/commits?path=' + encodeURIComponent(f.full) + '&sha=' + CFG.branch + '&per_page=50');
+    code.idx = 0; code.size = f.size;
+    const sel = $('vversion'); sel.replaceChildren();
+    const total = code.commits.length;
+    code.commits.forEach((c, i) => {
+      const o = el('option', null, 'v' + (total - i) + (i === 0 ? ' (actual)' : '') + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0].slice(0,60) + ' · ' + c.sha.slice(0,7));
+      o.value = i; sel.append(o);
+    });
+    $('vpath').textContent = f.full;
+    $('vhist').href = 'https://github.com/'+CFG.owner+'/'+CFG.repo+'/commits/'+CFG.branch+'/'+f.full;
+    $('vbar').hidden = false;
+    await mostrarVersion();
+  } catch (e) { msg(e.message); }
+}
+async function mostrarVersion(){
+  const c = code.commits[code.idx]; if (!c) { msg('Este archivo no tiene historial.'); return; }
+  $('vgh').href = 'https://github.com/'+CFG.owner+'/'+CFG.repo+'/blob/'+c.sha+'/'+code.archivo;
+  if (code.size > 300000){ msg('Archivo muy grande para mostrarlo aquí. Ábrelo con "Ver en GitHub".'); return; }
+  try {
+    const text = await rawFile(c.sha, code.archivo);
+    code.texto = text;
+    const lines = text.replace(/\r\n/g,'\n').split('\n');
+    if (lines.length && lines[lines.length-1] === '') lines.pop();
+    const info = $('vinfo'); info.hidden = false;
+    let ops;
+    if ($('vdiff').checked){
+      const prev = code.commits[code.idx+1];
+      const pl = prev ? (await rawFile(prev.sha, code.archivo)).replace(/\r\n/g,'\n').split('\n') : [];
+      if (pl.length && pl[pl.length-1] === '') pl.pop();
+      if (pl.length * lines.length > 9e6){ msg('Archivo demasiado grande para comparar versiones.'); return; }
+      ops = diffLines(pl, lines);
+      const a = ops.filter(o => o.k === 'add').length, d = ops.filter(o => o.k === 'del').length;
+      info.textContent = (prev ? 'Cambios frente a la versión anterior: ' : 'Primera versión: ') + '+' + a + ' / −' + d + ' líneas';
+    } else {
+      ops = lines.map(t => ({k:'ctx', t}));
+      info.textContent = lines.length + ' líneas · ' + c.commit.author.name + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0];
+    }
+    const frag = document.createDocumentFragment(); let n = 0;
+    ops.forEach(o => {
+      const row = el('div','cl ' + ($('vdiff').checked ? o.k : 'ctx'));
+      if (o.k !== 'del') n++;
+      row.append(el('span','ln', o.k === 'del' ? '' : n), el('span','tx', o.t));
+      frag.append(row);
+    });
+    $('vcode').replaceChildren(frag);
+  } catch (e) { msg(e.message); }
+}
+$('vversion').onchange = ev => { code.idx = +ev.target.value; mostrarVersion(); };
+$('vdiff').onchange = mostrarVersion;
+$('vcopiar').onclick = async ev => { try { await navigator.clipboard.writeText(code.texto || ''); ev.target.textContent = 'Copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar', 1500); } catch {} };
+
+function vista(v){
+  $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo';
+  $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo');
+  try { history.replaceState(null, '', v === 'codigo' ? '#codigo' : location.pathname + location.search); } catch {}
+  if (v === 'codigo') cargarArbol();
+}
+$('tabLog').onclick = () => vista('log');
+$('tabCodigo').onclick = () => vista('codigo');
+if (location.hash === '#codigo') vista('codigo');
 
 cargar();
 </script>
