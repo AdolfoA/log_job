@@ -71,6 +71,14 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
 .chk input{padding:0}
 .sep{width:1px;background:var(--line);margin:2px 4px}
+.srcbar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:12px 0 6px}
+.sel{display:grid;gap:3px;font-size:12px;color:var(--mute)}
+.crumb{font:12.5px ui-monospace,Consolas,monospace;color:var(--mute);margin:4px 0 8px;word-break:break-all}
+.crumb b{color:var(--acc)}
+.tokpanel{background:var(--panel);border:1px solid var(--warn);border-radius:12px;padding:12px;margin:8px 0}
+.tokpanel p{margin:6px 0 10px;font-size:13px;color:var(--mute)}
+.fdir{font:12.5px ui-monospace,Consolas,monospace;color:var(--text);cursor:pointer;padding:4px 6px;list-style-position:inside}
+details.fd > div{padding-left:12px;border-left:1px solid var(--line);margin-left:8px}
 .empty{text-align:center;color:var(--mute);padding:40px 0}
 dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;width:min(560px,94vw);padding:18px}
 dialog::backdrop{background:#0009}
@@ -116,7 +124,21 @@ dialog textarea{min-height:90px;resize:vertical}
   </div>
 
   <div id="vistaCodigo" hidden>
-    <div class="chips" id="proyectos"></div>
+    <div class="srcbar">
+      <label class="sel">Repo <select id="srcSel"></select></label>
+      <label class="sel">Rama <select id="brSel"></select></label>
+      <button id="tokBtn" hidden>Token</button>
+    </div>
+    <div class="crumb" id="crumb"></div>
+    <div class="tokpanel" id="tokPanel" hidden>
+      <b>Acceso al repo privado</b>
+      <p>Pega un token <i>fine-grained</i> de GitHub con permiso de solo lectura (Contents: Read) limitado a este repo y con fecha de vencimiento. Se guarda solo en este navegador y solo se envía a api.github.com.</p>
+      <div class="bar">
+        <input type="password" id="tokInp" placeholder="github_pat_…" autocomplete="off" style="flex:1;min-width:200px">
+        <button class="pri" id="tokSave">Guardar y cargar</button>
+        <button id="tokDel">Quitar token</button>
+      </div>
+    </div>
     <div class="code-wrap">
       <div class="filelist" id="archivos"></div>
       <div class="viewer">
@@ -129,10 +151,10 @@ dialog textarea{min-height:90px;resize:vertical}
           <a id="vhist" target="_blank" rel="noopener">Historial</a>
         </div>
         <div class="vinfo" id="vinfo" hidden></div>
-        <div class="code" id="vcode"><div class="vmsg">Elige un proyecto y un archivo.</div></div>
+        <div class="code" id="vcode"><div class="vmsg">Elige un archivo.</div></div>
       </div>
     </div>
-    <p class="note">Lee la carpeta <code>proyectos/</code> del repo usando la API pública de GitHub (límite de 60 consultas por hora por IP; se guarda en caché 5 minutos).</p>
+    <p class="note">Lee los repos con la API de GitHub. Repos públicos: hasta 60 consultas por hora; con token, 5.000. Los resultados se guardan 5 minutos en este navegador.</p>
   </div>
 </div>
 
@@ -318,34 +340,60 @@ try { const t = localStorage.getItem('adolfo-log-theme'); if (t) document.docume
 
 
 /* ---------- Visor de código ---------- */
-const CFG = (() => {
-  const m = location.hostname.match(/^(.+)\.github\.io$/);
-  const repo = location.pathname.split('/')[1];
-  return {owner: m ? m[1] : 'AdolfoA', repo: m && repo ? repo : 'log_job', branch: 'main', root: 'proyectos'};
-})();
+const SOURCES = [
+  {id:'log', label:'AdolfoA/log_job · proyectos/', repo:'AdolfoA/log_job', root:'proyectos', priv:false},
+  {id:'cbc', label:'AdolfoA/CBC (privado)', repo:'AdolfoA/CBC', root:'', priv:true}
+];
+const tokKey = s => 'adolfo-log-token:' + s.repo;
+const getTok = s => { try { return localStorage.getItem(tokKey(s)) || ''; } catch { return ''; } };
+const setTok = (s, v) => { try { v ? localStorage.setItem(tokKey(s), v) : localStorage.removeItem(tokKey(s)); } catch {} };
 const cache = {
   get(k){ try { const v = JSON.parse(sessionStorage.getItem('gh:'+k)); if (v && Date.now() - v.t < 300000) return v.d; } catch {} return null; },
   set(k,d){ try { sessionStorage.setItem('gh:'+k, JSON.stringify({t:Date.now(), d})); } catch {} }
 };
+const code = {src: SOURCES[0], branch:'', branches:[], tree:null, archivo:null, commits:[], idx:0, size:0, texto:''};
+const msg = t => { $('vcode').replaceChildren(el('div','vmsg',t)); };
+
+function errRate(r){
+  const rs = r.headers.get('x-ratelimit-reset');
+  return new Error('Se alcanzó el límite de la API de GitHub' + (rs ? '; se restablece a las ' + new Date(rs*1000).toLocaleTimeString() : '') + '.');
+}
+function authHeaders(accept){
+  const h = {Accept: accept || 'application/vnd.github+json'}, t = getTok(code.src);
+  if (t) h.Authorization = 'Bearer ' + t;
+  return h;
+}
 async function ghApi(path){
-  const c = cache.get('api'+path); if (c) return c;
-  const r = await fetch('https://api.github.com/repos/'+CFG.owner+'/'+CFG.repo+path, {headers:{Accept:'application/vnd.github+json'}});
-  if (r.status === 403 || r.status === 429){
-    const rs = r.headers.get('x-ratelimit-reset');
-    throw new Error('Se alcanzó el límite de la API de GitHub' + (rs ? '; se restablece a las ' + new Date(rs*1000).toLocaleTimeString() : '') + '.');
-  }
+  const s = code.src, k = s.repo + '|api' + path, c = cache.get(k); if (c) return c;
+  const r = await fetch('https://api.github.com/repos/' + s.repo + path, {headers: authHeaders()});
+  if (r.status === 401) throw new Error('El token no es válido o venció. Actualízalo con «Token».');
+  if (r.status === 404 && s.priv) throw new Error('No se encontró ' + s.repo + ' o el token no tiene acceso. Revisa el token en «Token».');
+  if (r.status === 403 || r.status === 429) throw errRate(r);
   if (!r.ok) throw new Error('GitHub respondió ' + r.status + '.');
-  const d = await r.json(); cache.set('api'+path, d); return d;
+  const d = await r.json(); cache.set(k, d); return d;
 }
 async function rawFile(ref, path){
-  const c = cache.get('raw'+ref+path); if (c !== null) return c;
-  const r = await fetch('https://raw.githubusercontent.com/'+CFG.owner+'/'+CFG.repo+'/'+ref+'/'+path.split('/').map(encodeURIComponent).join('/'));
+  const s = code.src, k = s.repo + '|raw' + ref + path, c = cache.get(k); if (c !== null) return c;
+  const enc = path.split('/').map(encodeURIComponent).join('/');
+  const r = (s.priv || getTok(s))
+    ? await fetch('https://api.github.com/repos/' + s.repo + '/contents/' + enc + '?ref=' + encodeURIComponent(ref), {headers: authHeaders('application/vnd.github.raw+json')})
+    : await fetch('https://raw.githubusercontent.com/' + s.repo + '/' + ref + '/' + enc);
+  if (r.status === 403 || r.status === 429) throw errRate(r);
   if (!r.ok) throw new Error('No se pudo leer el archivo (' + r.status + ').');
-  const t = await r.text(); cache.set('raw'+ref+path, t); return t;
+  const t = await r.text(); cache.set(k, t); return t;
 }
-
-const code = {tree:null, proyecto:'', archivo:'', commits:[], idx:0};
-const msg = t => { const d = el('div','vmsg',t); $('vcode').replaceChildren(d); };
+function paraVer(path, text){
+  if (!/\.ipynb$/i.test(path)) return text;
+  try {
+    const nb = JSON.parse(text);
+    return nb.cells.map((c, i) => {
+      const src = Array.isArray(c.source) ? c.source.join('') : (c.source || '');
+      return c.cell_type === 'markdown'
+        ? '# %% [markdown] celda ' + i + '\n' + src.split('\n').map(l => '# ' + l).join('\n')
+        : '# %% celda ' + i + '\n' + src;
+    }).join('\n\n');
+  } catch { return text; }
+}
 
 function diffLines(a, b){
   const n = a.length, m = b.length;
@@ -363,52 +411,76 @@ function diffLines(a, b){
   return out;
 }
 
-async function cargarArbol(){
-  if (code.tree) return;
-  msg('Cargando proyectos…');
+function crumb(){
+  const c = $('crumb'); c.replaceChildren();
+  const s = code.src;
+  c.append(document.createTextNode(s.repo + (s.root ? '/' + s.root : '') + ' · rama '), Object.assign(el('b'), {textContent: code.branch || '—'}));
+  if (code.archivo) c.append(document.createTextNode(' · ' + code.archivo.rel));
+}
+function limpiarVisor(){
+  code.archivo = null; $('vbar').hidden = true; $('vinfo').hidden = true; $('archivos').replaceChildren(); crumb();
+}
+
+function initFuentes(){
+  const sel = $('srcSel'); sel.replaceChildren();
+  SOURCES.forEach(s => { const o = el('option', null, s.label); o.value = s.id; sel.append(o); });
+  try { const last = localStorage.getItem('adolfo-log-src'); if (last && SOURCES.some(s => s.id === last)) { sel.value = last; code.src = SOURCES.find(s => s.id === last); } } catch {}
+}
+async function cargarRepo(){
+  const s = code.src; code.tree = null; limpiarVisor();
+  $('tokBtn').hidden = !s.priv;
+  $('brSel').replaceChildren();
+  if (s.priv && !getTok(s)){ $('tokPanel').hidden = false; msg('Este repo es privado: pega tu token para leerlo.'); return; }
+  $('tokPanel').hidden = true;
+  msg('Cargando ramas…');
   try {
-    const d = await ghApi('/git/trees/' + CFG.branch + '?recursive=1');
-    const pre = CFG.root + '/';
-    const map = {};
-    d.tree.filter(x => x.type === 'blob' && x.path.startsWith(pre) && !x.path.endsWith('.gitkeep')).forEach(x => {
-      const rest = x.path.slice(pre.length), i = rest.indexOf('/');
-      if (i < 0) return;
-      (map[rest.slice(0,i)] = map[rest.slice(0,i)] || []).push({full: x.path, rel: rest.slice(i+1), size: x.size});
-    });
-    code.tree = map;
-    renderProyectos();
-    const nombres = Object.keys(map).sort();
-    if (!nombres.length){ msg('Aún no hay proyectos. Crea una carpeta dentro de "proyectos/" en el repo.'); return; }
-    seleccionarProyecto(code.proyecto && map[code.proyecto] ? code.proyecto : nombres[0]);
+    const br = await ghApi('/branches?per_page=100');
+    code.branches = br.map(b => b.name);
+    if (!code.branches.length){ msg('El repo aún no tiene ramas ni commits.'); return; }
+    if (!code.branches.includes(code.branch)) code.branch = code.branches.includes('main') ? 'main' : code.branches[0];
+    code.branches.forEach(n => { const o = el('option', null, n); o.value = n; $('brSel').append(o); });
+    $('brSel').value = code.branch;
+    await cargarArbol();
   } catch (e) { msg(e.message); }
 }
-function renderProyectos(){
-  const c = $('proyectos'); c.replaceChildren();
-  Object.keys(code.tree).sort().forEach(n => {
-    const ch = el('span','chip' + (code.proyecto === n ? ' on' : ''), n);
-    ch.onclick = () => seleccionarProyecto(n);
-    c.append(ch);
-  });
+async function cargarArbol(){
+  limpiarVisor(); msg('Cargando archivos…');
+  try {
+    const d = await ghApi('/git/trees/' + code.branch.split('/').map(encodeURIComponent).join('/') + '?recursive=1');
+    const root = code.src.root ? code.src.root + '/' : '';
+    const files = d.tree.filter(x => x.type === 'blob' && x.path.startsWith(root) && !x.path.endsWith('.gitkeep'))
+      .map(x => ({full: x.path, rel: x.path.slice(root.length), size: x.size}));
+    code.tree = files; crumb();
+    if (!files.length){ msg('Esta rama no tiene archivos' + (root ? ' en ' + root : '') + '.'); return; }
+    const nodo = {dirs:{}, files:[]};
+    files.sort((a,b) => a.rel.localeCompare(b.rel)).forEach(f => {
+      const parts = f.rel.split('/'); let n = nodo;
+      parts.slice(0,-1).forEach(d2 => { n = n.dirs[d2] = n.dirs[d2] || {dirs:{}, files:[]}; });
+      n.files.push(f);
+    });
+    pintarArbol(nodo, $('archivos'), 0);
+    const first = files.find(f => /^readme/i.test(f.rel.split('/').pop())) || files[0];
+    abrirArchivo(first);
+  } catch (e) { msg(e.message); }
 }
-function seleccionarProyecto(n){
-  code.proyecto = n; code.archivo = ''; renderProyectos();
-  $('vbar').hidden = true; $('vinfo').hidden = true;
-  const L = $('archivos'); L.replaceChildren();
-  const files = code.tree[n].slice().sort((a,b) => a.rel.localeCompare(b.rel));
-  files.forEach(f => {
-    const b = el('button','fbtn', f.rel); b.title = f.rel; b.dataset.full = f.full;
-    b.onclick = () => abrirArchivo(f);
-    L.append(b);
+function pintarArbol(n, cont, nivel){
+  cont.replaceChildren && nivel === 0 && cont.replaceChildren();
+  Object.keys(n.dirs).sort().forEach(name => {
+    const d = el('details', 'fd'); d.open = nivel < 2;
+    d.append(el('summary', 'fdir', name));
+    const inner = el('div'); pintarArbol(n.dirs[name], inner, nivel + 1); d.append(inner); cont.append(d);
   });
-  const first = files.find(f => /readme/i.test(f.rel)) || files[0];
-  if (first) abrirArchivo(first); else msg('Esta carpeta está vacía.');
+  n.files.forEach(f => {
+    const b = el('button', 'fbtn', f.rel.split('/').pop()); b.title = f.rel; b.dataset.full = f.full;
+    b.onclick = () => abrirArchivo(f); cont.append(b);
+  });
 }
 async function abrirArchivo(f){
-  code.archivo = f.full;
+  code.archivo = f; crumb();
   document.querySelectorAll('.fbtn').forEach(b => b.classList.toggle('on', b.dataset.full === f.full));
   msg('Cargando versiones…');
   try {
-    code.commits = await ghApi('/commits?path=' + encodeURIComponent(f.full) + '&sha=' + CFG.branch + '&per_page=50');
+    code.commits = await ghApi('/commits?path=' + encodeURIComponent(f.full) + '&sha=' + encodeURIComponent(code.branch) + '&per_page=50');
     code.idx = 0; code.size = f.size;
     const sel = $('vversion'); sel.replaceChildren();
     const total = code.commits.length;
@@ -416,54 +488,68 @@ async function abrirArchivo(f){
       const o = el('option', null, 'v' + (total - i) + (i === 0 ? ' (actual)' : '') + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0].slice(0,60) + ' · ' + c.sha.slice(0,7));
       o.value = i; sel.append(o);
     });
-    $('vpath').textContent = f.full;
-    $('vhist').href = 'https://github.com/'+CFG.owner+'/'+CFG.repo+'/commits/'+CFG.branch+'/'+f.full;
+    $('vpath').textContent = code.src.repo + ' @ ' + code.branch + ' / ' + f.full;
+    $('vhist').href = 'https://github.com/' + code.src.repo + '/commits/' + code.branch + '/' + f.full;
     $('vbar').hidden = false;
     await mostrarVersion();
   } catch (e) { msg(e.message); }
 }
+function aLineas(t){
+  const l = t.replace(/\r\n/g, '\n').split('\n');
+  if (l.length && l[l.length-1] === '') l.pop();
+  return l;
+}
 async function mostrarVersion(){
-  const c = code.commits[code.idx]; if (!c) { msg('Este archivo no tiene historial.'); return; }
-  $('vgh').href = 'https://github.com/'+CFG.owner+'/'+CFG.repo+'/blob/'+c.sha+'/'+code.archivo;
-  if (code.size > 300000){ msg('Archivo muy grande para mostrarlo aquí. Ábrelo con "Ver en GitHub".'); return; }
+  const c = code.commits[code.idx]; if (!c){ msg('Este archivo no tiene historial en esta rama.'); return; }
+  const f = code.archivo;
+  $('vgh').href = 'https://github.com/' + code.src.repo + '/blob/' + c.sha + '/' + f.full;
+  if (code.size > 1500000){ msg('Archivo muy grande para mostrarlo aquí. Ábrelo con «Ver en GitHub».'); return; }
   try {
-    const text = await rawFile(c.sha, code.archivo);
+    const text = paraVer(f.full, await rawFile(c.sha, f.full));
     code.texto = text;
-    const lines = text.replace(/\r\n/g,'\n').split('\n');
-    if (lines.length && lines[lines.length-1] === '') lines.pop();
-    const info = $('vinfo'); info.hidden = false;
+    const lines = aLineas(text), info = $('vinfo'); info.hidden = false;
+    const diff = $('vdiff').checked;
     let ops;
-    if ($('vdiff').checked){
-      const prev = code.commits[code.idx+1];
-      const pl = prev ? (await rawFile(prev.sha, code.archivo)).replace(/\r\n/g,'\n').split('\n') : [];
-      if (pl.length && pl[pl.length-1] === '') pl.pop();
-      if (pl.length * lines.length > 9e6){ msg('Archivo demasiado grande para comparar versiones.'); return; }
+    if (diff){
+      const prev = code.commits[code.idx + 1];
+      const pl = prev ? aLineas(paraVer(f.full, await rawFile(prev.sha, f.full))) : [];
+      if (pl.length * lines.length > 2.5e7){ msg('Archivo demasiado grande para comparar versiones.'); return; }
       ops = diffLines(pl, lines);
       const a = ops.filter(o => o.k === 'add').length, d = ops.filter(o => o.k === 'del').length;
       info.textContent = (prev ? 'Cambios frente a la versión anterior: ' : 'Primera versión: ') + '+' + a + ' / −' + d + ' líneas';
     } else {
       ops = lines.map(t => ({k:'ctx', t}));
-      info.textContent = lines.length + ' líneas · ' + c.commit.author.name + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0];
+      info.textContent = lines.length + ' líneas · ' + c.commit.author.name + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0] + (/\.ipynb$/i.test(f.full) ? ' · notebook mostrado por celdas' : '');
     }
     const frag = document.createDocumentFragment(); let n = 0;
     ops.forEach(o => {
-      const row = el('div','cl ' + ($('vdiff').checked ? o.k : 'ctx'));
+      const row = el('div', 'cl ' + (diff ? o.k : 'ctx'));
       if (o.k !== 'del') n++;
-      row.append(el('span','ln', o.k === 'del' ? '' : n), el('span','tx', o.t));
+      row.append(el('span', 'ln', o.k === 'del' ? '' : n), el('span', 'tx', o.t));
       frag.append(row);
     });
     $('vcode').replaceChildren(frag);
   } catch (e) { msg(e.message); }
 }
+$('srcSel').onchange = ev => {
+  code.src = SOURCES.find(s => s.id === ev.target.value); code.branch = '';
+  try { localStorage.setItem('adolfo-log-src', code.src.id); } catch {}
+  cargarRepo();
+};
+$('brSel').onchange = ev => { code.branch = ev.target.value; cargarArbol(); };
+$('tokBtn').onclick = () => { $('tokPanel').hidden = !$('tokPanel').hidden; };
+$('tokSave').onclick = () => { const v = $('tokInp').value.trim(); if (!v) return; setTok(code.src, v); $('tokInp').value = ''; cargarRepo(); };
+$('tokDel').onclick = () => { setTok(code.src, ''); try { sessionStorage.clear(); } catch {} cargarRepo(); };
 $('vversion').onchange = ev => { code.idx = +ev.target.value; mostrarVersion(); };
 $('vdiff').onchange = mostrarVersion;
 $('vcopiar').onclick = async ev => { try { await navigator.clipboard.writeText(code.texto || ''); ev.target.textContent = 'Copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar', 1500); } catch {} };
 
+let codigoIniciado = false;
 function vista(v){
   $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo';
   $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo');
   try { history.replaceState(null, '', v === 'codigo' ? '#codigo' : location.pathname + location.search); } catch {}
-  if (v === 'codigo') cargarArbol();
+  if (v === 'codigo' && !codigoIniciado){ codigoIniciado = true; initFuentes(); cargarRepo(); }
 }
 $('tabLog').onclick = () => vista('log');
 $('tabCodigo').onclick = () => vista('codigo');
