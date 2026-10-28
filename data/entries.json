@@ -35,15 +35,16 @@
     "id": "2026-10-27-003",
     "fecha": "2026-10-27",
     "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Pendiente",
-    "estado": "Abierto",
-    "titulo": "El except de df_E sobrescribe df_C y pierde las filas agregadas",
-    "resumen": "En el bloque except de df_E se ejecuta df_C = spark_dfs[\"C_Gastos_Plan_CP\"], que reemplaza df_C por el original crudo. Cambiar a df_C_periodos = df_C.select(...) sin reasignar df_C.",
-    "detalle": "",
+    "tipo": "Hallazgo",
+    "estado": "Hecho",
+    "titulo": "Resuelto: el except de df_E sobrescribía df_C y perdía las filas agregadas",
+    "resumen": "Causa: en el bloque except de df_E, la línea df_C = spark_dfs[\"C_Gastos_Plan_CP\"] volvía a leer la hoja C cruda y reemplazaba el df_C ya limpio y completado (puesto a 4 dígitos, mes y año sin \".0\", sin duplicados, filas agregadas como el puesto 2001). Solo se activa si la hoja E viene vacía o no existe; con SP00 no ocurre. Solución aplicada el 2026-10-28: se eliminó (comentó) esa línea y el except usa el df_C existente. Verificado leyendo la celda; no se ejecutó en Databricks.",
+    "detalle": "except Exception as ex:\n    print(f\"Excepción generada: {ex}\")\n    df_C_periodos = df_C.select(\n        \"Mandante\",\n        \"Codigo_de_Centro_Productivo_codigo_de_planta\",\n        \"Año\",\n        \"Versión_de_simulación\",\n        \"Periodo_Mes\"\n    ).dropDuplicates()\n    df_E = df_C_periodos.withColumn(\"Tipo_GF\", lit(\"GF_MAQ\")) \\\n        .withColumn(\"Monto_Moneda_Local\", lit(0))",
     "tags": [
       "df_C",
       "df_E",
-      "riesgo"
+      "riesgo",
+      "resuelto"
     ],
     "categoria": "Modelo de costos"
   },
