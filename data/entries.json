@@ -326,7 +326,7 @@
     "tipo": "Cambio",
     "estado": "Hecho",
     "titulo": "Carpeta proyectos/ eliminada y carpeta codigos/ creada en log_job",
-    "resumen": "Se quitó proyectos/ del repo público y el visor quedó leyendo solo AdolfoA/CBC. Se creó codigos/ (con un README) para subir código más adelante. Como log_job es público, todo lo que se suba ahí es visible; el código de la empresa va en CBC.",
+    "resumen": "Se quitó proyectos/ del repo público y el visor quedó leyendo solo AdolfoA/CBC. Se creó codigos/ (con un README) para subir código más adelante. Como log_job es público, todo lo que se suba ahí es visible; el código de la empresa va en CBC. Actualización: el visor de código ahora también lee codigos/ (selector «AdolfoA/log_job · codigos/ (público)»), sin token porque el repo es público.",
     "detalle": "",
     "tags": [
       "log_job",

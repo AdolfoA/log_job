@@ -360,7 +360,8 @@ try { const t = localStorage.getItem('adolfo-log-theme'); if (t) document.docume
 
 /* ---------- Visor de código ---------- */
 const SOURCES = [
-  {id:'cbc', label:'AdolfoA/CBC (privado)', repo:'AdolfoA/CBC', root:'', priv:true}
+  {id:'cbc', label:'AdolfoA/CBC (privado)', repo:'AdolfoA/CBC', root:'', priv:true},
+  {id:'log', label:'AdolfoA/log_job · codigos/ (público)', repo:'AdolfoA/log_job', root:'codigos', priv:false}
 ];
 const tokKey = s => 'adolfo-log-token:' + s.repo;
 const getTok = s => { try { return localStorage.getItem(tokKey(s)) || ''; } catch { return ''; } };
