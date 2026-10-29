@@ -126,7 +126,7 @@ dialog textarea{min-height:90px;resize:vertical}
 <body>
 <div class="wrap">
   <header>
-    <h1>Bitácora Adolfo<small>log de chats</small></h1>
+    <h1>Bitácora Adolfo<small id="sub">log de chats</small></h1>
     <div class="bar">
       <button class="pri" id="nuevo">+ Nueva entrada</button>
       <button id="exportar">Exportar JSON</button>
@@ -884,6 +884,7 @@ const expPdf = () => {
 let codigoIniciado = false;
 function vista(v){
   document.querySelector('.wrap').classList.toggle('ancho', v === 'codigo');
+  $('sub').textContent = v === 'codigo' ? 'repos (Git)' : 'log de chats';
   $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo';
   $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo');
   try { history.replaceState(null, '', v === 'codigo' ? (code.archivo ? hashDe(code.archivo.full, code.linea) : '#codigo') : location.pathname + location.search); } catch {}
