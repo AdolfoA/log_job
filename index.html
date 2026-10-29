@@ -47,7 +47,7 @@ button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .entry h3,.entry .meta{overflow-wrap:anywhere}
 details{margin-top:8px}summary{cursor:pointer;color:var(--mute);font-size:13px}
 pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;font:12.5px/1.5 ui-monospace,Consolas,monospace;margin:8px 0 0}
-.sugs{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-top:-4px}.sugl{font-size:12px;color:var(--mute)}.chip.sm{padding:2px 9px;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.sugs{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-top:-4px}.sugl{font-size:12px;color:var(--mute)}.chip.sm{padding:3px 11px;font-size:13px}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tag{font:11px ui-monospace,Consolas,monospace;color:var(--mute)}
 .actions{display:flex;gap:6px;margin-top:10px}
@@ -344,15 +344,13 @@ function nuevoId(fecha){
   return id;
 }
 
-const TAGS_BASE = ['pipeline','spark','adf','databricks','modelo-costos','df_C','git','repo','bitácora','visor','seguridad','documentación','bug','pendiente'];
+const TAGS_SUG = [['tipo','Cambio'],['tipo','Consulta'],['tipo','Decisión'],['tipo','Hallazgo'],['tipo','Pendiente'],['estado','Abierto'],['estado','Resuelto'],['estado','Hecho']];
 function actuales(){ return $('form').elements.tags.value.split(',').map(x => x.trim()).filter(Boolean); }
 function pintarSugeridas(){
-  const cnt = {}; todas().forEach(e => (e.tags||[]).forEach(t => cnt[t] = (cnt[t]||0) + 1));
-  const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a] || a.localeCompare(b)).slice(0, 16);
-  const lista = [...top, ...TAGS_BASE.filter(t => !top.some(x => x.toLowerCase() === t.toLowerCase()))].slice(0, 22), usadas = actuales();
-  $('tagSug').replaceChildren(...lista.map(t => {
-    const c = el('span', 'chip sm' + (usadas.includes(t) ? ' on' : ''), '#' + t);
-    c.onclick = () => { const a = actuales(), i = a.indexOf(t); if (i >= 0) a.splice(i, 1); else a.push(t); $('form').elements.tags.value = a.join(', '); pintarSugeridas(); };
+  const usadas = actuales().map(x => x.toLowerCase());
+  $('tagSug').replaceChildren(...TAGS_SUG.map(([kind, t]) => {
+    const c = colorear(el('span', 'chip sm' + (usadas.includes(t.toLowerCase()) ? ' on' : '')), kind, t);
+    c.onclick = () => { const a = actuales(), i = a.findIndex(x => x.toLowerCase() === t.toLowerCase()); if (i >= 0) a.splice(i, 1); else a.push(t); $('form').elements.tags.value = a.join(', '); pintarSugeridas(); };
     return c;
   }));
 }
