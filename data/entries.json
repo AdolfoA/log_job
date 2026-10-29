@@ -370,7 +370,7 @@
   "id": "2026-10-29-002",
   "fecha": "2026-10-29",
   "chat": "Adolfo [Modelo costo agua]",
-  "categoria": "Modelo costo agua",
+  "categoria": "Modelo de costos",
   "tipo": "Hallazgo",
   "estado": "Resuelto",
   "titulo": "BA021738 / RP04: la prueba en dev se calculaba como Componente en vez de Maestro (filtro no encendido)",
