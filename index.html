@@ -188,6 +188,7 @@ dialog textarea{min-height:90px;resize:vertical}
           <label class="chk"><input type="checkbox" id="vdiff"> Ver cambios</label>
           <button id="vcopiar">Copiar</button>
           <button id="vlink">Copiar enlace</button>
+          <button id="vpdf" title="Abrir lo que se ve para imprimir o guardar como PDF">Exportar PDF</button>
           <a id="vgh" target="_blank" rel="noopener">Ver en GitHub</a>
           <a id="vhist" target="_blank" rel="noopener">Historial</a>
         </div>
@@ -795,6 +796,22 @@ function marcarLinea(n, row){
 }
 $('vlink').onclick = async ev => {
   try { await navigator.clipboard.writeText(location.origin + location.pathname + hashDe(code.archivo.full, code.linea)); ev.target.textContent = 'Enlace copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar enlace', 1500); } catch {}
+};
+$('vpdf').onclick = () => {
+  if (!code.archivo || !$('vcode').firstChild) return;
+  const w = window.open('', '_blank');
+  if (!w){ alert('El navegador bloqueó la ventana. Permite las ventanas emergentes para este sitio.'); return; }
+  const d = w.document;
+  d.documentElement.setAttribute('data-theme', 'light'); d.title = code.archivo.full.split('/').pop();
+  document.querySelectorAll('style').forEach(st => d.head.append(d.importNode(st, true)));
+  const pr = d.createElement('style');
+  pr.textContent = 'body{background:#fff!important;color:#111!important;margin:18px}#pdfhead{font:12px ui-monospace,Consolas,monospace;color:#555;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:6px}#vcode{max-height:none!important;overflow:visible!important}.md table{display:table}.cl,.cellcode,pre{white-space:pre-wrap!important;word-break:break-word}@media print{body{margin:0}}';
+  d.head.append(pr);
+  const hd = d.createElement('div'); hd.id = 'pdfhead';
+  hd.textContent = code.src.repo + ' @ ' + code.branch + ' / ' + code.archivo.full + ' · ' + new Date().toISOString().slice(0, 10);
+  const box = d.importNode($('vcode'), true); box.removeAttribute('hidden');
+  d.body.append(hd, box);
+  w.focus(); setTimeout(() => { try { w.print(); } catch {} }, 500);
 };
 function irAEntrada(){
   const m = location.hash.match(/^#e=(.+)$/); if (!m) return;
