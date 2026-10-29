@@ -1,369 +1,384 @@
 [
-  {
-    "id": "2026-10-27-001",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Completar df_C con puestos faltantes de df_A_volumen",
-    "resumen": "Los puestos que están en df_A_volumen y no en df_C (en SP00: el 2001) se agregan a df_C con Monto_Moneda_Local = 0, una fila por cada mes y cada Tipo_GF_GV_LD existente en df_C. El resto de columnas se copia de df_C. El bloque va después de crear df_C y antes de su uso (celda 9, GEN 1: GENERAR DATAFRAMES BASES).",
-    "detalle": "KEYS = Año, Versión_de_simulación, Codigo_de_Centro_Productivo_codigo_de_planta\nfaltantes = left_anti(A.puestos, C.puestos) por KEYS\nnuevas = faltantes x meses(C) x tipos(C) con monto 0\ndf_C = df_C_orig.unionByName(nuevas)\n\nResultado esperado con SP00: 1 puesto x 12 meses x 2 tipos (GF_MAQ, GF_MO) = 24 filas.",
-    "tags": [
-      "df_C",
-      "PySpark",
-      "SP00"
-    ],
-    "categoria": "Modelo de costos"
-  },
-  {
-    "id": "2026-10-27-002",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Consulta",
-    "estado": "Resuelto",
-    "titulo": "Error AMBIGUOUS_REFERENCE en Periodo_Mes",
-    "resumen": "La lista 'otras' comparaba nombres de columna distinguiendo mayúsculas (Python), por lo que Periodo_Mes quedaba duplicada en 'nuevas'. Spark no distingue mayúsculas, pero Python sí. Se resolvieron los nombres reales de df_C con un diccionario en minúsculas.",
-    "detalle": "_n = {c.lower(): c for c in df_C.columns}\n_excluir = {c.lower() for c in KEYS + [PUESTO, MES, TIPO, MONTO, CECO]}\notras = [c for c in df_C_orig.columns if c.lower() not in _excluir]",
-    "tags": [
-      "df_C",
-      "error",
-      "mayúsculas"
-    ],
-    "categoria": "Modelo de costos"
-  },
-  {
-    "id": "2026-10-27-003",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Hallazgo",
-    "estado": "Resuelto",
-    "titulo": "Resuelto: el except de df_E sobrescribía df_C y perdía las filas agregadas",
-    "resumen": "Causa: en el bloque except de df_E, la línea df_C = spark_dfs[\"C_Gastos_Plan_CP\"] volvía a leer la hoja C cruda y reemplazaba el df_C ya limpio y completado (puesto a 4 dígitos, mes y año sin \".0\", sin duplicados, filas agregadas como el puesto 2001). Solo se activa si la hoja E viene vacía o no existe; con SP00 no ocurre. Solución aplicada el 2026-10-28: se eliminó (comentó) esa línea y el except usa el df_C existente. Verificado leyendo la celda; no se ejecutó en Databricks.",
-    "detalle": "except Exception as ex:\n    print(f\"Excepción generada: {ex}\")\n    df_C_periodos = df_C.select(\n        \"Mandante\",\n        \"Codigo_de_Centro_Productivo_codigo_de_planta\",\n        \"Año\",\n        \"Versión_de_simulación\",\n        \"Periodo_Mes\"\n    ).dropDuplicates()\n    df_E = df_C_periodos.withColumn(\"Tipo_GF\", lit(\"GF_MAQ\")) \\\n        .withColumn(\"Monto_Moneda_Local\", lit(0))",
-    "tags": [
-      "df_C",
-      "df_E",
-      "riesgo",
-      "resuelto"
-    ],
-    "categoria": "Modelo de costos"
-  },
-  {
-    "id": "2026-10-27-004",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Pendiente",
-    "estado": "Abierto",
-    "titulo": "Definir el CECO del puesto 2001",
-    "resumen": "En el Excel el CECO es único por puesto, no por mes. El puesto 2001 no tiene CECO propio en df_C; el código toma el menor CECO del mes. Más abajo (línea 374) el CECO se vacía de todos modos, así que no afecta el resultado actual.",
-    "detalle": "",
-    "tags": [
-      "df_C",
-      "CECO"
-    ],
-    "categoria": "Modelo de costos"
-  },
-  {
-    "id": "2026-10-27-005",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Modelo costo agua]",
-    "tipo": "Hallazgo",
-    "estado": "Abierto",
-    "titulo": "Account key de Azure Storage en texto plano (celda 4)",
-    "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo. Actualización 2026-10-28: en las copias guardadas en el repo CBC la key quedó reemplazada por «<REDACTED: usar dbutils.secrets>»; los notebooks originales no se tocaron. Sigue pendiente rotar la key.",
-    "detalle": "",
-    "tags": [
-      "seguridad",
-      "Azure"
-    ],
-    "categoria": "Seguridad"
-  },
-  {
-    "id": "2026-10-27-006",
-    "fecha": "2026-10-27",
-    "chat": "Adolfo [Pipeline ADF]",
-    "tipo": "Consulta",
-    "estado": "Hecho",
-    "titulo": "Qué es el pipeline Listar_Contenido_Final + ForEach_Archivos",
-    "resumen": "Pipeline de Azure Data Factory: una actividad Web lista el contenido de una carpeta y un ForEach recorre los elementos; dentro, Validar_Si_Es_Archivo filtra archivos de carpetas. Secuencial desmarcado = iteraciones en paralelo.",
-    "detalle": "",
-    "tags": [
-      "ADF",
-      "pipeline"
-    ],
-    "categoria": "Pipeline / Spark"
-  },
-  {
-    "id": "2026-10-19-001",
-    "fecha": "2026-10-19",
-    "chat": "Adolfo Claude",
-    "categoria": "Claude / Agentes",
-    "tipo": "Consulta",
-    "estado": "Hecho",
-    "titulo": "Guía técnica para tareas con varios agentes (app Claude Pro y Claude Code)",
-    "resumen": "Se verificó en la documentación oficial cómo funcionan los subagentes en Claude Code y las capacidades multiagente en la app, y se entregó una guía en Word (.docx) en español con patrones, pasos, ejemplos y comparación entre ambas versiones.",
-    "detalle": "",
-    "tags": [
-      "agentes",
-      "Claude Code",
-      "guía"
-    ]
-  },
-  {
-    "id": "2026-10-19-002",
-    "fecha": "2026-10-19",
-    "chat": "Adolfo Claude",
-    "categoria": "Git",
-    "tipo": "Consulta",
-    "estado": "Hecho",
-    "titulo": "Guía de Git con diagramas y fechas de creación/documentación",
-    "resumen": "Guía con nueve diagramas (incluido uno de conflictos). El usuario pidió agregar la fecha de creación y la fecha de la documentación o gif de referencia; se verificó la versión estable de Git y la edición de Pro Git en git-scm.com. Se corrigieron dos diagramas: la etiqueta HEAD cortada y el de las cuatro zonas con textos amontonados. La fecha exacta de este tramo no consta en el resumen del chat; se ubicó entre el 19 y el 26 de octubre.",
-    "detalle": "",
-    "tags": [
-      "Git",
-      "diagramas",
-      "documentación"
-    ]
-  },
-  {
-    "id": "2026-10-20-001",
-    "fecha": "2026-10-20",
-    "chat": "Adolfo Claude",
-    "categoria": "Documentación",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Revisión de estilo del documento «Modelo Costos Plan Cascadeo – Databricks» (v1.31 a v1.4)",
-    "resumen": "Se pidió un estilo impersonal tipo tesis, sin primera persona (ej. «En esta etapa se filtran los semiterminados cuya producción es igual a cero…»). Se revisó el Word, se aplicaron correcciones con control de cambios y se generó la versión 1.4 con fila nueva en el historial de versiones. Fecha aproximada: entre el 19 y el 26 de octubre.",
-    "detalle": "",
-    "tags": [
-      "Word",
-      "estilo",
-      "v1.4"
-    ]
-  },
-  {
-    "id": "2026-10-20-002",
-    "fecha": "2026-10-20",
-    "chat": "Adolfo Claude",
-    "categoria": "Documentación",
-    "tipo": "Pendiente",
-    "estado": "Abierto",
-    "titulo": "Confirmar tres puntos del documento v1.4",
-    "resumen": "Quedaron por definir: la fórmula correcta de LM_RENDIMIENTO, el significado de JT y el nombre correcto del Lakehouse. El documento quedó con comentarios en esos puntos.",
-    "detalle": "",
-    "tags": [
-      "LM_RENDIMIENTO",
-      "JT",
-      "Lakehouse"
-    ]
-  },
-  {
-    "id": "2026-10-22-001",
-    "fecha": "2026-10-22",
-    "chat": "Adolfo Claude",
-    "categoria": "Pipeline / Spark",
-    "tipo": "Consulta",
-    "estado": "Hecho",
-    "titulo": "Diagnóstico de falla de un pipeline ejecutado por ADF (Spark)",
-    "resumen": "Orientación para hallar la causa real: celda en rojo, líneas «Caused by:» y Spark UI. Causas habituales: falta de memoria, Excel dañado o vacío, columna con tipo o nombre distinto, nodo caído, tabla Delta modificada en paralelo. Más workers o más memoria solo ayudan con OutOfMemoryError o ExecutorLostFailure. Posible mal diseño: leer Excel con openpyxl o pandas en el driver (la memoria que importa es la del driver). Fecha aproximada.",
-    "detalle": "",
-    "tags": [
-      "ADF",
-      "Spark",
-      "memoria",
-      "openpyxl"
-    ]
-  },
-  {
-    "id": "2026-10-26-001",
-    "fecha": "2026-10-26",
-    "chat": "Adolfo Claude",
-    "categoria": "Modelo de costos",
-    "tipo": "Consulta",
-    "estado": "Abierto",
-    "titulo": "Validar GF_MO y GF_MAQ del puesto 6403, mes 1, centro RP04",
-    "resumen": "Valores esperados: GF_MO = 140.470,51 y GF_MAQ = 108.980,67. La verificación de la celda 99 no filtraba por mes (agrupaba todos los meses), por eso 299.519 no era comparable con 108.980. Se dieron dos consultas, una sobre df_costos_plan y otra sobre df_C, para comparar mes contra mes. Falta que el usuario pegue los resultados para decidir si el gasto queda en otro puesto, se pierde en el cálculo o si el error era solo de la verificación.",
-    "detalle": "(df_costos_plan\n  .filter((col(\"CENTRO\")==\"RP04\") & (col(\"MES\").isin(\"1\",\"01\")) &\n          (col(\"0PIOBJSV\")==\"0ATY\") & (col(\"CLASIFICACION\")==\"CP\") &\n          (col(\"COMPONENTE\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(\"PUESTO_TRABAJO\",\"COMPONENTE\")\n  .agg(sum(\"COSTO_TOTAL\").alias(\"DISTRIBUIDO\"))\n  .orderBy(\"PUESTO_TRABAJO\",\"COMPONENTE\").display())\n\n(df_C.filter((col(\"Codigo_de_Centro_Productivo_codigo_de_planta\")==\"RP04\") &\n             (col(\"Periodo_Mes\").isin(\"1\",\"01\")) &\n             (col(\"Tipo_GF_GV_LD\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(col(\"Codigo_de_Puesto_de_Trabajo\").alias(\"PUESTO\"), \"Tipo_GF_GV_LD\")\n  .agg(sum(\"Monto_Moneda_Local\").alias(\"EN_HOJA_C\"))\n  .orderBy(\"PUESTO\",\"Tipo_GF_GV_LD\").display())",
-    "tags": [
-      "RP04",
-      "6403",
-      "GF_MO",
-      "GF_MAQ"
-    ]
-  },
-  {
-    "id": "2026-10-26-002",
-    "fecha": "2026-10-26",
-    "chat": "Adolfo Ocio",
-    "categoria": "Juegos",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Battle City original en vista superior (HTML)",
-    "resumen": "Se eligió el estilo Battle City (no Super Battle Tank). Juego original, sin copiar gráficos: base con águila, ladrillos y acero, oleadas de tanques enemigos, niveles y power-ups (estrella, casco, reloj, pala, granada, vida), con control táctil.",
-    "detalle": "",
-    "tags": [
-      "juego",
-      "HTML",
-      "Battle City"
-    ]
-  },
-  {
-    "id": "2026-10-26-003",
-    "fecha": "2026-10-26",
-    "chat": "Adolfo Ocio",
-    "categoria": "Juegos",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Contenedor nginx (Docker) para servir el juego localmente",
-    "resumen": "Imagen nginx ligera que sirve el juego desde la máquina del usuario, con reinicio automático y un README que explica cómo activar un volumen para editar sin reconstruir. Las tipografías vienen de Google Fonts; sin internet el juego funciona igual. Siguiente paso ofrecido: separar en HTML, CSS y JS o agregar modo de dos jugadores.",
-    "detalle": "",
-    "tags": [
-      "Docker",
-      "nginx"
-    ]
-  },
-  {
-    "id": "2026-10-26-004",
-    "fecha": "2026-10-26",
-    "chat": "Adolfo Ocio",
-    "categoria": "Juegos",
-    "tipo": "Pendiente",
-    "estado": "Abierto",
-    "titulo": "Instalar WSL 2 para luego Docker Desktop",
-    "resumen": "Pasos dados: comprobar versión de Windows (winver), virtualización habilitada, abrir PowerShell como administrador, ejecutar wsl --install, reiniciar, crear usuario de Ubuntu y verificar con wsl -l -v que la versión sea 2. Falta que el usuario reporte el resultado para seguir con Docker Desktop.",
-    "detalle": "",
-    "tags": [
-      "WSL2",
-      "Docker Desktop",
-      "Windows"
-    ]
-  },
-  {
-    "id": "2026-10-28-001",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Bitácora",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Creación de la bitácora (página estática en GitHub Pages)",
-    "resumen": "Página HTML + JSON sin dependencias, publicada desde el repo público AdolfoA/log_job (https://adolfoa.github.io/log_job/). Cada entrada tiene fecha, chat, categoría, tipo, estado, título, resumen, detalle/código y tags. Incluye búsqueda, filtros por categoría, chat, tipo y estado (Abierto, Resuelto, Hecho), contadores, tema claro/oscuro, y botones para crear, editar, borrar, exportar e importar entradas.",
-    "detalle": "Estados: Abierto (ámbar), Resuelto (verde, con ✓), Hecho.\nTipos: Cambio, Consulta, Pendiente, Hallazgo, Decisión.\nDatos del repo: data/entries.json. Entradas creadas en la página se guardan en el navegador; para publicarlas hay que exportar el JSON y reemplazar el archivo.\nFlujo con Claude: se pide «registra esto» y Claude edita data/entries.json y hace el commit.",
-    "tags": [
-      "bitácora",
-      "GitHub Pages",
-      "entries.json"
-    ]
-  },
-  {
-    "id": "2026-10-28-002",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Repos y código",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Creación del repo privado CBC con las ramas main y dev",
-    "resumen": "Repo privado AdolfoA/CBC, creado vacío por el usuario. Carpeta costos-plan-cs-cascadeo (el «/» de «c/s» no sirve en nombres de carpeta). Rama main: MODELO_COSTO_PLAN_CASCADEO.ipynb. Rama dev: OK_AGUA_MODELO_COSTO_PLAN_CASCADEO.ipynb. Ambas ramas parten de un commit con README de convenciones.",
-    "detalle": "Antes de guardarlos, los notebooks se limpiaron:\n- Se quitaron todas las salidas (el de OK_AGUA pasó de 16 MB a 266 KB).\n- La account key de Azure (2 apariciones por notebook, una comentada) se reemplazó por <REDACTED: usar dbutils.secrets>.\n- Los originales no se modificaron.\nQuedan visibles las rutas abfss://…@datalakecentralprd… y el nombre de la cuenta de almacenamiento (no son secretos).",
-    "tags": [
-      "CBC",
-      "ramas",
-      "notebooks"
-    ]
-  },
-  {
-    "id": "2026-10-28-003",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Repos y código",
-    "tipo": "Decisión",
-    "estado": "Hecho",
-    "titulo": "Código en repo privado y bitácora en repo público",
-    "resumen": "Como GitHub Pages solo publica gratis desde repos públicos y un repo privado no puede leerse desde la página sin credenciales, se acordó usar dos repos: log_job (público, sin código ni datos de la empresa) y CBC (privado, con el código). El visor lee CBC con un token de solo lectura que el usuario pega en su navegador.",
-    "detalle": "",
-    "tags": [
-      "privacidad",
-      "dos repos"
-    ]
-  },
-  {
-    "id": "2026-10-28-004",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Repos y código",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Token de acceso de solo lectura para el visor",
-    "resumen": "El usuario generó un token fine-grained de GitHub limitado al repo CBC, con permisos Contents: Read-only y Metadata: Read-only (este último lo agrega GitHub siempre). Se pega en la pestaña Código, botón «Token», y se guarda solo en el almacenamiento del navegador; solo se envía a api.github.com y nunca se escribe en el repo. Debe tener fecha de vencimiento; si se pierde o se expone, se borra en GitHub y se genera otro.",
-    "detalle": "Con token el límite de la API sube de 60 a 5.000 consultas por hora.\nEl token hay que pegarlo en cada navegador o dispositivo donde se use el visor.",
-    "tags": [
-      "token",
-      "seguridad",
-      "GitHub"
-    ]
-  },
-  {
-    "id": "2026-10-28-005",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Bitácora",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Visor de código en la pestaña Código",
-    "resumen": "Selector de repo y de rama, árbol de carpetas, ruta visible (repo · rama · archivo), historial de versiones por archivo, «Ver cambios» (líneas agregadas y quitadas frente a la versión anterior), botones Copiar, Ver en GitHub e Historial, y panel para el token. Ventana de código ancha (hasta 1700 px).",
-    "detalle": "Notebooks .ipynb: se muestran por celdas. Vista «Formateado» (predeterminada): celdas de texto en Markdown (títulos, listas, tablas, enlaces, código en línea; texto entre _guiones bajos_ en negrita sin alterar nombres como df_C_orig) y celdas de código en bloques numerados; vista «Código»: texto plano con números de línea.\nArchivos .md: también se muestran formateados.\nSin innerHTML: el contenido se dibuja con nodos de texto, así que HTML o enlaces javascript: en un notebook no ejecutan nada.\nLimitación: los notebooks se guardan sin salidas, por lo que no se ven resultados ni tablas de datos.",
-    "tags": [
-      "visor",
-      "Markdown",
-      "notebooks",
-      "diff"
-    ]
-  },
-  {
-    "id": "2026-10-28-006",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Bitácora",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Carpeta proyectos/ eliminada y carpeta codigos/ creada en log_job",
-    "resumen": "Se quitó proyectos/ del repo público y el visor quedó leyendo solo AdolfoA/CBC. Se creó codigos/ (con un README) para subir código más adelante. Como log_job es público, todo lo que se suba ahí es visible; el código de la empresa va en CBC. Actualización: el visor de código ahora también lee codigos/ (selector «AdolfoA/log_job · codigos/ (público)»), sin token porque el repo es público.",
-    "detalle": "",
-    "tags": [
-      "log_job",
-      "codigos"
-    ]
-  },
-  {
-    "id": "2026-10-28-007",
-    "fecha": "2026-10-28",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Modelo de costos",
-    "tipo": "Pendiente",
-    "estado": "Abierto",
-    "titulo": "Reubicar el bloque que completa df_C en la celda de dataframes base",
-    "resumen": "En la versión de la celda revisada el 2026-10-28 el bloque «Completar df_C» (puestos faltantes de df_A_volumen con monto 0, por mes y tipo) ya no aparecía entre df_C.select(df_C.columns[:11]) y el bloque de df_E. Sin él, el puesto 2001 no entra al join de la celda 28 y su costo se pierde sin error. Falta volver a pegarlo (versión corregida sin ambigüedad de Periodo_Mes) y probar con la planta SP00 (deben salir 24 filas nuevas).",
-    "detalle": "",
-    "tags": [
-      "df_C",
-      "SP00",
-      "puesto 2001"
-    ]
-  },
-  {
-    "id": "2026-10-29-001",
-    "fecha": "2026-10-29",
-    "chat": "Adolfo [Modelo costo agua]",
-    "categoria": "Documentación",
-    "tipo": "Cambio",
-    "estado": "Hecho",
-    "titulo": "Documento «Transformación de unidades» creado y subido a la carpeta documentos/",
-    "resumen": "Se creó el documento que explica cómo el modelo Costo Plan con Cascadeo transforma las unidades: nomenclatura, tablas fuente, enfoques Maestro y Componente, fórmulas, ejemplos resueltos, el caso BA021738 y los puntos abiertos. Se guardó en la nueva carpeta documentos/ de log_job (Markdown, también disponible como documento exportable a Word) y se agregó el selector «AdolfoA/log_job · documentos/ (público)» en la pestaña Código para leerlo.",
-    "detalle": "Archivo: documentos/Transformacion-de-unidades-Modelo-Costo-Plan-Cascadeo.md. El repo es público: lo subido ahí es visible para cualquiera. Decisión del usuario: ubicarlo en log_job y no en CBC.",
-    "tags": [
-      "documentos",
-      "unidades",
-      "Maestro",
-      "Componente"
-    ]
-  }
+ {
+  "id": "2026-10-27-001",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Modelo costo agua]",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Completar df_C con puestos faltantes de df_A_volumen",
+  "resumen": "Los puestos que están en df_A_volumen y no en df_C (en SP00: el 2001) se agregan a df_C con Monto_Moneda_Local = 0, una fila por cada mes y cada Tipo_GF_GV_LD existente en df_C. El resto de columnas se copia de df_C. El bloque va después de crear df_C y antes de su uso (celda 9, GEN 1: GENERAR DATAFRAMES BASES).",
+  "detalle": "KEYS = Año, Versión_de_simulación, Codigo_de_Centro_Productivo_codigo_de_planta\nfaltantes = left_anti(A.puestos, C.puestos) por KEYS\nnuevas = faltantes x meses(C) x tipos(C) con monto 0\ndf_C = df_C_orig.unionByName(nuevas)\n\nResultado esperado con SP00: 1 puesto x 12 meses x 2 tipos (GF_MAQ, GF_MO) = 24 filas.",
+  "tags": [
+   "df_C",
+   "PySpark",
+   "SP00"
+  ],
+  "categoria": "Modelo de costos"
+ },
+ {
+  "id": "2026-10-27-002",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Modelo costo agua]",
+  "tipo": "Consulta",
+  "estado": "Resuelto",
+  "titulo": "Error AMBIGUOUS_REFERENCE en Periodo_Mes",
+  "resumen": "La lista 'otras' comparaba nombres de columna distinguiendo mayúsculas (Python), por lo que Periodo_Mes quedaba duplicada en 'nuevas'. Spark no distingue mayúsculas, pero Python sí. Se resolvieron los nombres reales de df_C con un diccionario en minúsculas.",
+  "detalle": "_n = {c.lower(): c for c in df_C.columns}\n_excluir = {c.lower() for c in KEYS + [PUESTO, MES, TIPO, MONTO, CECO]}\notras = [c for c in df_C_orig.columns if c.lower() not in _excluir]",
+  "tags": [
+   "df_C",
+   "error",
+   "mayúsculas"
+  ],
+  "categoria": "Modelo de costos"
+ },
+ {
+  "id": "2026-10-27-003",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Modelo costo agua]",
+  "tipo": "Hallazgo",
+  "estado": "Resuelto",
+  "titulo": "Resuelto: el except de df_E sobrescribía df_C y perdía las filas agregadas",
+  "resumen": "Causa: en el bloque except de df_E, la línea df_C = spark_dfs[\"C_Gastos_Plan_CP\"] volvía a leer la hoja C cruda y reemplazaba el df_C ya limpio y completado (puesto a 4 dígitos, mes y año sin \".0\", sin duplicados, filas agregadas como el puesto 2001). Solo se activa si la hoja E viene vacía o no existe; con SP00 no ocurre. Solución aplicada el 2026-10-28: se eliminó (comentó) esa línea y el except usa el df_C existente. Verificado leyendo la celda; no se ejecutó en Databricks.",
+  "detalle": "except Exception as ex:\n    print(f\"Excepción generada: {ex}\")\n    df_C_periodos = df_C.select(\n        \"Mandante\",\n        \"Codigo_de_Centro_Productivo_codigo_de_planta\",\n        \"Año\",\n        \"Versión_de_simulación\",\n        \"Periodo_Mes\"\n    ).dropDuplicates()\n    df_E = df_C_periodos.withColumn(\"Tipo_GF\", lit(\"GF_MAQ\")) \\\n        .withColumn(\"Monto_Moneda_Local\", lit(0))",
+  "tags": [
+   "df_C",
+   "df_E",
+   "riesgo",
+   "resuelto"
+  ],
+  "categoria": "Modelo de costos"
+ },
+ {
+  "id": "2026-10-27-004",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Modelo costo agua]",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Definir el CECO del puesto 2001",
+  "resumen": "En el Excel el CECO es único por puesto, no por mes. El puesto 2001 no tiene CECO propio en df_C; el código toma el menor CECO del mes. Más abajo (línea 374) el CECO se vacía de todos modos, así que no afecta el resultado actual.",
+  "detalle": "",
+  "tags": [
+   "df_C",
+   "CECO"
+  ],
+  "categoria": "Modelo de costos"
+ },
+ {
+  "id": "2026-10-27-005",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Modelo costo agua]",
+  "tipo": "Hallazgo",
+  "estado": "Abierto",
+  "titulo": "Account key de Azure Storage en texto plano (celda 4)",
+  "resumen": "El notebook tiene la account key del storage escrita en la celda 4. Recomendado: rotarla y moverla a un secret scope de Databricks antes de compartir el archivo. Actualización 2026-10-28: en las copias guardadas en el repo CBC la key quedó reemplazada por «<REDACTED: usar dbutils.secrets>»; los notebooks originales no se tocaron. Sigue pendiente rotar la key.",
+  "detalle": "",
+  "tags": [
+   "seguridad",
+   "Azure"
+  ],
+  "categoria": "Seguridad"
+ },
+ {
+  "id": "2026-10-27-006",
+  "fecha": "2026-10-27",
+  "chat": "Adolfo [Pipeline ADF]",
+  "tipo": "Consulta",
+  "estado": "Hecho",
+  "titulo": "Qué es el pipeline Listar_Contenido_Final + ForEach_Archivos",
+  "resumen": "Pipeline de Azure Data Factory: una actividad Web lista el contenido de una carpeta y un ForEach recorre los elementos; dentro, Validar_Si_Es_Archivo filtra archivos de carpetas. Secuencial desmarcado = iteraciones en paralelo.",
+  "detalle": "",
+  "tags": [
+   "ADF",
+   "pipeline"
+  ],
+  "categoria": "Pipeline / Spark"
+ },
+ {
+  "id": "2026-10-19-001",
+  "fecha": "2026-10-19",
+  "chat": "Adolfo Claude",
+  "categoria": "Claude / Agentes",
+  "tipo": "Consulta",
+  "estado": "Hecho",
+  "titulo": "Guía técnica para tareas con varios agentes (app Claude Pro y Claude Code)",
+  "resumen": "Se verificó en la documentación oficial cómo funcionan los subagentes en Claude Code y las capacidades multiagente en la app, y se entregó una guía en Word (.docx) en español con patrones, pasos, ejemplos y comparación entre ambas versiones.",
+  "detalle": "",
+  "tags": [
+   "agentes",
+   "Claude Code",
+   "guía"
+  ]
+ },
+ {
+  "id": "2026-10-19-002",
+  "fecha": "2026-10-19",
+  "chat": "Adolfo Claude",
+  "categoria": "Git",
+  "tipo": "Consulta",
+  "estado": "Hecho",
+  "titulo": "Guía de Git con diagramas y fechas de creación/documentación",
+  "resumen": "Guía con nueve diagramas (incluido uno de conflictos). El usuario pidió agregar la fecha de creación y la fecha de la documentación o gif de referencia; se verificó la versión estable de Git y la edición de Pro Git en git-scm.com. Se corrigieron dos diagramas: la etiqueta HEAD cortada y el de las cuatro zonas con textos amontonados. La fecha exacta de este tramo no consta en el resumen del chat; se ubicó entre el 19 y el 26 de octubre.",
+  "detalle": "",
+  "tags": [
+   "Git",
+   "diagramas",
+   "documentación"
+  ]
+ },
+ {
+  "id": "2026-10-20-001",
+  "fecha": "2026-10-20",
+  "chat": "Adolfo Claude",
+  "categoria": "Documentación",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Revisión de estilo del documento «Modelo Costos Plan Cascadeo – Databricks» (v1.31 a v1.4)",
+  "resumen": "Se pidió un estilo impersonal tipo tesis, sin primera persona (ej. «En esta etapa se filtran los semiterminados cuya producción es igual a cero…»). Se revisó el Word, se aplicaron correcciones con control de cambios y se generó la versión 1.4 con fila nueva en el historial de versiones. Fecha aproximada: entre el 19 y el 26 de octubre.",
+  "detalle": "",
+  "tags": [
+   "Word",
+   "estilo",
+   "v1.4"
+  ]
+ },
+ {
+  "id": "2026-10-20-002",
+  "fecha": "2026-10-20",
+  "chat": "Adolfo Claude",
+  "categoria": "Documentación",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Confirmar tres puntos del documento v1.4",
+  "resumen": "Quedaron por definir: la fórmula correcta de LM_RENDIMIENTO, el significado de JT y el nombre correcto del Lakehouse. El documento quedó con comentarios en esos puntos.",
+  "detalle": "",
+  "tags": [
+   "LM_RENDIMIENTO",
+   "JT",
+   "Lakehouse"
+  ]
+ },
+ {
+  "id": "2026-10-22-001",
+  "fecha": "2026-10-22",
+  "chat": "Adolfo Claude",
+  "categoria": "Pipeline / Spark",
+  "tipo": "Consulta",
+  "estado": "Hecho",
+  "titulo": "Diagnóstico de falla de un pipeline ejecutado por ADF (Spark)",
+  "resumen": "Orientación para hallar la causa real: celda en rojo, líneas «Caused by:» y Spark UI. Causas habituales: falta de memoria, Excel dañado o vacío, columna con tipo o nombre distinto, nodo caído, tabla Delta modificada en paralelo. Más workers o más memoria solo ayudan con OutOfMemoryError o ExecutorLostFailure. Posible mal diseño: leer Excel con openpyxl o pandas en el driver (la memoria que importa es la del driver). Fecha aproximada.",
+  "detalle": "",
+  "tags": [
+   "ADF",
+   "Spark",
+   "memoria",
+   "openpyxl"
+  ]
+ },
+ {
+  "id": "2026-10-26-001",
+  "fecha": "2026-10-26",
+  "chat": "Adolfo Claude",
+  "categoria": "Modelo de costos",
+  "tipo": "Consulta",
+  "estado": "Abierto",
+  "titulo": "Validar GF_MO y GF_MAQ del puesto 6403, mes 1, centro RP04",
+  "resumen": "Valores esperados: GF_MO = 140.470,51 y GF_MAQ = 108.980,67. La verificación de la celda 99 no filtraba por mes (agrupaba todos los meses), por eso 299.519 no era comparable con 108.980. Se dieron dos consultas, una sobre df_costos_plan y otra sobre df_C, para comparar mes contra mes. Falta que el usuario pegue los resultados para decidir si el gasto queda en otro puesto, se pierde en el cálculo o si el error era solo de la verificación.",
+  "detalle": "(df_costos_plan\n  .filter((col(\"CENTRO\")==\"RP04\") & (col(\"MES\").isin(\"1\",\"01\")) &\n          (col(\"0PIOBJSV\")==\"0ATY\") & (col(\"CLASIFICACION\")==\"CP\") &\n          (col(\"COMPONENTE\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(\"PUESTO_TRABAJO\",\"COMPONENTE\")\n  .agg(sum(\"COSTO_TOTAL\").alias(\"DISTRIBUIDO\"))\n  .orderBy(\"PUESTO_TRABAJO\",\"COMPONENTE\").display())\n\n(df_C.filter((col(\"Codigo_de_Centro_Productivo_codigo_de_planta\")==\"RP04\") &\n             (col(\"Periodo_Mes\").isin(\"1\",\"01\")) &\n             (col(\"Tipo_GF_GV_LD\").isin(\"GF_MO\",\"GF_MAQ\")))\n  .groupBy(col(\"Codigo_de_Puesto_de_Trabajo\").alias(\"PUESTO\"), \"Tipo_GF_GV_LD\")\n  .agg(sum(\"Monto_Moneda_Local\").alias(\"EN_HOJA_C\"))\n  .orderBy(\"PUESTO\",\"Tipo_GF_GV_LD\").display())",
+  "tags": [
+   "RP04",
+   "6403",
+   "GF_MO",
+   "GF_MAQ"
+  ]
+ },
+ {
+  "id": "2026-10-26-002",
+  "fecha": "2026-10-26",
+  "chat": "Adolfo Ocio",
+  "categoria": "Juegos",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Battle City original en vista superior (HTML)",
+  "resumen": "Se eligió el estilo Battle City (no Super Battle Tank). Juego original, sin copiar gráficos: base con águila, ladrillos y acero, oleadas de tanques enemigos, niveles y power-ups (estrella, casco, reloj, pala, granada, vida), con control táctil.",
+  "detalle": "",
+  "tags": [
+   "juego",
+   "HTML",
+   "Battle City"
+  ]
+ },
+ {
+  "id": "2026-10-26-003",
+  "fecha": "2026-10-26",
+  "chat": "Adolfo Ocio",
+  "categoria": "Juegos",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Contenedor nginx (Docker) para servir el juego localmente",
+  "resumen": "Imagen nginx ligera que sirve el juego desde la máquina del usuario, con reinicio automático y un README que explica cómo activar un volumen para editar sin reconstruir. Las tipografías vienen de Google Fonts; sin internet el juego funciona igual. Siguiente paso ofrecido: separar en HTML, CSS y JS o agregar modo de dos jugadores.",
+  "detalle": "",
+  "tags": [
+   "Docker",
+   "nginx"
+  ]
+ },
+ {
+  "id": "2026-10-26-004",
+  "fecha": "2026-10-26",
+  "chat": "Adolfo Ocio",
+  "categoria": "Juegos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Instalar WSL 2 para luego Docker Desktop",
+  "resumen": "Pasos dados: comprobar versión de Windows (winver), virtualización habilitada, abrir PowerShell como administrador, ejecutar wsl --install, reiniciar, crear usuario de Ubuntu y verificar con wsl -l -v que la versión sea 2. Falta que el usuario reporte el resultado para seguir con Docker Desktop.",
+  "detalle": "",
+  "tags": [
+   "WSL2",
+   "Docker Desktop",
+   "Windows"
+  ]
+ },
+ {
+  "id": "2026-10-28-001",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Creación de la bitácora (página estática en GitHub Pages)",
+  "resumen": "Página HTML + JSON sin dependencias, publicada desde el repo público AdolfoA/log_job (https://adolfoa.github.io/log_job/). Cada entrada tiene fecha, chat, categoría, tipo, estado, título, resumen, detalle/código y tags. Incluye búsqueda, filtros por categoría, chat, tipo y estado (Abierto, Resuelto, Hecho), contadores, tema claro/oscuro, y botones para crear, editar, borrar, exportar e importar entradas.",
+  "detalle": "Estados: Abierto (ámbar), Resuelto (verde, con ✓), Hecho.\nTipos: Cambio, Consulta, Pendiente, Hallazgo, Decisión.\nDatos del repo: data/entries.json. Entradas creadas en la página se guardan en el navegador; para publicarlas hay que exportar el JSON y reemplazar el archivo.\nFlujo con Claude: se pide «registra esto» y Claude edita data/entries.json y hace el commit.",
+  "tags": [
+   "bitácora",
+   "GitHub Pages",
+   "entries.json"
+  ]
+ },
+ {
+  "id": "2026-10-28-002",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Repos y código",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Creación del repo privado CBC con las ramas main y dev",
+  "resumen": "Repo privado AdolfoA/CBC, creado vacío por el usuario. Carpeta costos-plan-cs-cascadeo (el «/» de «c/s» no sirve en nombres de carpeta). Rama main: MODELO_COSTO_PLAN_CASCADEO.ipynb. Rama dev: OK_AGUA_MODELO_COSTO_PLAN_CASCADEO.ipynb. Ambas ramas parten de un commit con README de convenciones.",
+  "detalle": "Antes de guardarlos, los notebooks se limpiaron:\n- Se quitaron todas las salidas (el de OK_AGUA pasó de 16 MB a 266 KB).\n- La account key de Azure (2 apariciones por notebook, una comentada) se reemplazó por <REDACTED: usar dbutils.secrets>.\n- Los originales no se modificaron.\nQuedan visibles las rutas abfss://…@datalakecentralprd… y el nombre de la cuenta de almacenamiento (no son secretos).",
+  "tags": [
+   "CBC",
+   "ramas",
+   "notebooks"
+  ]
+ },
+ {
+  "id": "2026-10-28-003",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Repos y código",
+  "tipo": "Decisión",
+  "estado": "Hecho",
+  "titulo": "Código en repo privado y bitácora en repo público",
+  "resumen": "Como GitHub Pages solo publica gratis desde repos públicos y un repo privado no puede leerse desde la página sin credenciales, se acordó usar dos repos: log_job (público, sin código ni datos de la empresa) y CBC (privado, con el código). El visor lee CBC con un token de solo lectura que el usuario pega en su navegador.",
+  "detalle": "",
+  "tags": [
+   "privacidad",
+   "dos repos"
+  ]
+ },
+ {
+  "id": "2026-10-28-004",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Repos y código",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Token de acceso de solo lectura para el visor",
+  "resumen": "El usuario generó un token fine-grained de GitHub limitado al repo CBC, con permisos Contents: Read-only y Metadata: Read-only (este último lo agrega GitHub siempre). Se pega en la pestaña Código, botón «Token», y se guarda solo en el almacenamiento del navegador; solo se envía a api.github.com y nunca se escribe en el repo. Debe tener fecha de vencimiento; si se pierde o se expone, se borra en GitHub y se genera otro.",
+  "detalle": "Con token el límite de la API sube de 60 a 5.000 consultas por hora.\nEl token hay que pegarlo en cada navegador o dispositivo donde se use el visor.",
+  "tags": [
+   "token",
+   "seguridad",
+   "GitHub"
+  ]
+ },
+ {
+  "id": "2026-10-28-005",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Visor de código en la pestaña Código",
+  "resumen": "Selector de repo y de rama, árbol de carpetas, ruta visible (repo · rama · archivo), historial de versiones por archivo, «Ver cambios» (líneas agregadas y quitadas frente a la versión anterior), botones Copiar, Ver en GitHub e Historial, y panel para el token. Ventana de código ancha (hasta 1700 px).",
+  "detalle": "Notebooks .ipynb: se muestran por celdas. Vista «Formateado» (predeterminada): celdas de texto en Markdown (títulos, listas, tablas, enlaces, código en línea; texto entre _guiones bajos_ en negrita sin alterar nombres como df_C_orig) y celdas de código en bloques numerados; vista «Código»: texto plano con números de línea.\nArchivos .md: también se muestran formateados.\nSin innerHTML: el contenido se dibuja con nodos de texto, así que HTML o enlaces javascript: en un notebook no ejecutan nada.\nLimitación: los notebooks se guardan sin salidas, por lo que no se ven resultados ni tablas de datos.",
+  "tags": [
+   "visor",
+   "Markdown",
+   "notebooks",
+   "diff"
+  ]
+ },
+ {
+  "id": "2026-10-28-006",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Carpeta proyectos/ eliminada y carpeta codigos/ creada en log_job",
+  "resumen": "Se quitó proyectos/ del repo público y el visor quedó leyendo solo AdolfoA/CBC. Se creó codigos/ (con un README) para subir código más adelante. Como log_job es público, todo lo que se suba ahí es visible; el código de la empresa va en CBC. Actualización: el visor de código ahora también lee codigos/ (selector «AdolfoA/log_job · codigos/ (público)»), sin token porque el repo es público.",
+  "detalle": "",
+  "tags": [
+   "log_job",
+   "codigos"
+  ]
+ },
+ {
+  "id": "2026-10-28-007",
+  "fecha": "2026-10-28",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Reubicar el bloque que completa df_C en la celda de dataframes base",
+  "resumen": "En la versión de la celda revisada el 2026-10-28 el bloque «Completar df_C» (puestos faltantes de df_A_volumen con monto 0, por mes y tipo) ya no aparecía entre df_C.select(df_C.columns[:11]) y el bloque de df_E. Sin él, el puesto 2001 no entra al join de la celda 28 y su costo se pierde sin error. Falta volver a pegarlo (versión corregida sin ambigüedad de Periodo_Mes) y probar con la planta SP00 (deben salir 24 filas nuevas).",
+  "detalle": "",
+  "tags": [
+   "df_C",
+   "SP00",
+   "puesto 2001"
+  ]
+ },
+ {
+  "id": "2026-10-29-001",
+  "fecha": "2026-10-29",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Documentación",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Documento «Transformación de unidades» creado y subido a la carpeta documentos/",
+  "resumen": "Se creó el documento que explica cómo el modelo Costo Plan con Cascadeo transforma las unidades: nomenclatura, tablas fuente, enfoques Maestro y Componente, fórmulas, ejemplos resueltos, el caso BA021738 y los puntos abiertos. Se guardó en la nueva carpeta documentos/ de log_job (Markdown, también disponible como documento exportable a Word) y se agregó el selector «AdolfoA/log_job · documentos/ (público)» en la pestaña Código para leerlo.",
+  "detalle": "Archivo: documentos/Transformacion-de-unidades-Modelo-Costo-Plan-Cascadeo.md. El repo es público: lo subido ahí es visible para cualquiera. Decisión del usuario: ubicarlo en log_job y no en CBC.",
+  "tags": [
+   "documentos",
+   "unidades",
+   "Maestro",
+   "Componente"
+  ]
+ },
+ {
+  "id": "2026-10-29-002",
+  "fecha": "2026-10-29",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo costo agua",
+  "tipo": "Hallazgo",
+  "estado": "Resuelto",
+  "titulo": "BA021738 / RP04: la prueba en dev se calculaba como Componente en vez de Maestro (filtro no encendido)",
+  "resumen": "Al validar el material BA021738 (centro RP04, mes 1, componente 436527) en el notebook dev, los factores salían 1 / 1 y no se convertía GLN→L. Causa: la prueba simulada usa la etiqueta RP04AA en el widget FILTRO_CENTRO (con datos cargados de la planta RP04), pero la lista de la celda 7 que enciende la regla Maestro tenía 'RP04_AA' (con guion bajo). Como no coincidía, vReglaConversionMaestro_o_Componente quedaba en 'Componente' y el factor se buscaba por IDKNR, sin fila en L/GLL. Al corregir la lista a 'RP04AA' la regla pasa a 'Maestro' y el resultado es 238,33, que coincide con el valor esperado por el usuario.",
+  "detalle": "Celda 9 mantiene vFiltroCentro = 'RP04' (carga manual) a propósito: la planta real es RP04. main y dev tienen la misma lógica Maestro (búsqueda por padre, cambio 23.07.2026) y main ya incluye 'RP04' en la lista, por lo que no requiere cambio de código. El valor 902,14 reportado venía de un resultado antiguo y quedó descartado. Pendiente menor: dejar en el repo dev la lista con 'RP04AA' si se sube desde Databricks.",
+  "tags": [
+   "Hallazgo",
+   "Resuelto"
+  ]
+ }
 ]
