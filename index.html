@@ -29,6 +29,10 @@ button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .filters input[type=search]{flex:1 1 260px;min-width:220px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;cursor:pointer;color:var(--mute)}
+.chip.k{color:var(--c);border-color:color-mix(in srgb,var(--c) 50%,var(--line));background:color-mix(in srgb,var(--c) 10%,var(--panel2))}.chip.k:hover{background:color-mix(in srgb,var(--c) 22%,var(--panel2))}.chip.k.on{background:var(--c);border-color:var(--c);color:#0b0f14;font-weight:600}
+.badge.k{color:var(--c);border-color:color-mix(in srgb,var(--c) 55%,var(--line));background:color-mix(in srgb,var(--c) 10%,transparent)}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]) .chip.k:not(.on),:root:not([data-theme=dark]) .badge.k,:root:not([data-theme=dark]) h2.grupo.k{color:color-mix(in srgb,var(--c) 60%,#000)}}
+:root[data-theme=light] .chip.k:not(.on),:root[data-theme=light] .badge.k{color:color-mix(in srgb,var(--c) 60%,#000)}
 .chip.on{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .entry{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
 .entry.open-state{border-left:3px solid var(--warn)}
@@ -252,11 +256,26 @@ async function cargar(){
   render();
 }
 
+/* ---------- Iconos y colores por categoría / tipo / estado / chat ---------- */
+const PAL = ['#34d399','#60a5fa','#fbbf24','#f87171','#a78bfa','#f472b6','#fb923c','#2dd4bf','#a3e635','#38bdf8'];
+const hashPal = t => PAL[[...t].reduce((a, ch) => a + ch.charCodeAt(0), 0) % PAL.length];
+const ESTILOS = {
+  tipo: {Cambio:['🔧','#34d399'], Consulta:['❓','#60a5fa'], Decisión:['⚖️','#a78bfa'], Hallazgo:['🔎','#f87171'], Pendiente:['⏳','#fbbf24']},
+  estado: {Abierto:['📂','#fb923c'], Resuelto:['✅','#34d399'], Hecho:['🏁','#38bdf8']},
+  categoria: {'Bitácora':['📒','#2dd4bf'], 'Claude / Agentes':['🤖','#a78bfa'], 'Documentación':['📄','#60a5fa'], 'Git':['🌿','#fb923c'], 'Juegos':['🎮','#f472b6'], 'Modelo de costos':['💰','#fbbf24'], 'Pipeline / Spark':['⚡','#38bdf8'], 'Repos y código':['💻','#a3e635'], 'Seguridad':['🔒','#f87171'], 'Sin categoría':['📁','#94a3b8']},
+  chat: {'Adolfo Claude':['🤖','#a78bfa'], 'Adolfo Ocio':['🎲','#f472b6'], 'Adolfo [Modelo costo agua]':['💧','#38bdf8'], 'Adolfo [Pipeline ADF]':['🔀','#fb923c']}
+};
+function estilo(kind, v){ const e = (ESTILOS[kind] || {})[v]; return e ? {i: e[0], c: e[1]} : {i: kind === 'chat' ? '💬' : '🏷️', c: hashPal(v)}; }
+function colorear(node, kind, v, texto){
+  const st = estilo(kind, v); node.classList.add('k'); node.style.setProperty('--c', st.c); node.textContent = st.i + ' ' + (texto || v); return node;
+}
+
 function chips(cont, valores, clave){
   cont.replaceChildren();
   const mk = (v, t) => { const c = el('span','chip'+(filtro[clave]===v?' on':''), t); c.onclick = () => { filtro[clave] = v; render(); }; cont.append(c); };
   mk('', 'Todos');
   valores.forEach(v => mk(v, v));
+  [...cont.children].slice(1).forEach(c => colorear(c, clave, c.textContent));
 }
 
 let ultimaVista = [];
@@ -271,9 +290,9 @@ function render(){
   const tc = $('tipos'); tc.replaceChildren();
   const mk = (t, on, fn) => { const ch = el('span','chip' + (on ? ' on' : ''), t); ch.onclick = fn; tc.append(ch); };
   mk('Todos', !filtro.tipo && !filtro.estado, () => { filtro.tipo = ''; filtro.estado = ''; render(); });
-  tiposU.forEach(v => mk(v, filtro.tipo === v, () => { filtro.tipo = filtro.tipo === v ? '' : v; render(); }));
+  tiposU.forEach(v => { mk(v, filtro.tipo === v, () => { filtro.tipo = filtro.tipo === v ? '' : v; render(); }); colorear(tc.lastChild, 'tipo', v); });
   tc.append(el('span','sep'));
-  ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)).forEach(v => mk(v, filtro.estado === v, () => { filtro.estado = filtro.estado === v ? '' : v; render(); }));
+  ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)).forEach(v => { mk(v, filtro.estado === v, () => { filtro.estado = filtro.estado === v ? '' : v; render(); }); colorear(tc.lastChild, 'estado', v); });
   $('chatsList').replaceChildren(...chatsU.map(c => { const o = el('option'); o.value = c; return o; }));
 
   const q = filtro.q.toLowerCase();
@@ -297,11 +316,11 @@ function render(){
   ultimaVista = vis;
   let ultimaCat = null;
   vis.forEach(e => {
-    if (filtro.orden === 'cat' && (e.categoria||'Sin categoría') !== ultimaCat){ ultimaCat = e.categoria||'Sin categoría'; L.append(el('h2','grupo', ultimaCat)); }
+    if (filtro.orden === 'cat' && (e.categoria||'Sin categoría') !== ultimaCat){ ultimaCat = e.categoria||'Sin categoría'; const gh = el('h2','grupo'); colorear(gh, 'categoria', ultimaCat); gh.classList.remove('k'); gh.style.color = 'color-mix(in srgb,var(--c) 70%,var(--text))'; L.append(gh); }
     const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : e.estado === 'Resuelto' ? ' resolved-state' : ''));
     c.id = 'e-' + e.id;
     const m = el('div','meta');
-    m.append(el('span','badge t-'+e.tipo, e.tipo), el('span','badge',e.categoria||'Sin categoría'), el('span',null,e.fecha), el('span',null,'· '+e.chat), el('span','badge e-'+e.estado, (e.estado === 'Resuelto' ? '✓ ' : '') + e.estado));
+    m.append(colorear(el('span','badge'), 'tipo', e.tipo), colorear(el('span','badge'), 'categoria', e.categoria||'Sin categoría'), el('span',null,e.fecha), colorear(el('span','badge'), 'chat', e.chat), colorear(el('span','badge'), 'estado', e.estado));
     c.append(m, el('h3',null,e.titulo), el('p',null,e.resumen));
     if (e.detalle){ const d = el('details'); d.append(el('summary',null,'Ver detalle / código'), el('pre',null,e.detalle)); c.append(d); }
     if ((e.tags||[]).length){ const t = el('div','tags'); e.tags.forEach(x => t.append(el('span','tag','#'+x))); c.append(t); }
