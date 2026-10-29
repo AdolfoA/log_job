@@ -24,7 +24,7 @@ button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .stat b{color:var(--text)}
 .filters{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px;display:grid;gap:10px}
 .filters .row{display:flex;gap:8px;flex-wrap:wrap}
-.filters input[type=search]{flex:1;min-width:180px}
+.filters input[type=search]{flex:1 1 260px;min-width:220px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;cursor:pointer;color:var(--mute)}
 .chip.on{background:var(--acc2);border-color:var(--acc2);color:#fff}
@@ -139,6 +139,9 @@ dialog textarea{min-height:90px;resize:vertical}
   <div class="filters">
     <div class="row">
       <input type="search" id="buscar" placeholder="Buscar en título, resumen, código o tags…">
+      <label class="sel" style="flex-direction:row;align-items:center;gap:6px">Desde <input type="date" id="fDesde"></label>
+      <label class="sel" style="flex-direction:row;align-items:center;gap:6px">Hasta <input type="date" id="fHasta"></label>
+      <button id="fFecha" title="Quitar filtro de fechas" hidden>Quitar fechas</button>
       <select id="orden"><option value="cat">Por categoría</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
       <button id="expMd" title="Descargar en Markdown lo que se ve">Markdown</button>
       <button id="expPdf" title="Abrir informe para imprimir o guardar como PDF">PDF</button>
@@ -217,7 +220,7 @@ dialog textarea{min-height:90px;resize:vertical}
 const LS = 'adolfo-log-local-v1';
 let base = [];            // entradas del repo (data/entries.json)
 let locales = [];         // entradas creadas/editadas en este navegador
-let filtro = {chat:'', tipo:'', categoria:'', estado:'', q:'', orden:'cat'};
+let filtro = {chat:'', tipo:'', categoria:'', estado:'', q:'', desde:'', hasta:'', orden:'cat'};
 let editando = null;
 
 const $ = id => document.getElementById(id);
@@ -276,6 +279,7 @@ function render(){
     (!filtro.chat || e.chat === filtro.chat) &&
     (!filtro.tipo || e.tipo === filtro.tipo) &&
     (!filtro.estado || e.estado === filtro.estado) &&
+    (!filtro.desde || e.fecha >= filtro.desde) && (!filtro.hasta || e.fecha <= filtro.hasta) &&
     (!filtro.categoria || (e.categoria || 'Sin categoría') === filtro.categoria) &&
     (!q || [e.titulo, e.resumen, e.detalle, (e.tags||[]).join(' '), e.chat].join(' ').toLowerCase().includes(q))
   ).sort((a,b) => filtro.orden === 'cat'
@@ -346,6 +350,10 @@ $('form').addEventListener('submit', ev => {
 });
 $('cancelar').onclick = () => $('dlg').close();
 $('nuevo').onclick = () => abrir(null);
+const fechasUI = () => { $('fFecha').hidden = !(filtro.desde || filtro.hasta); };
+$('fDesde').onchange = ev => { filtro.desde = ev.target.value; fechasUI(); render(); };
+$('fHasta').onchange = ev => { filtro.hasta = ev.target.value; fechasUI(); render(); };
+$('fFecha').onclick = () => { filtro.desde = filtro.hasta = ''; $('fDesde').value = $('fHasta').value = ''; fechasUI(); render(); };
 $('buscar').oninput = ev => { filtro.q = ev.target.value; render(); };
 $('orden').onchange = ev => { filtro.orden = ev.target.value; render(); };
 
@@ -762,7 +770,7 @@ $('vlink').onclick = async ev => {
 function irAEntrada(){
   const m = location.hash.match(/^#e=(.+)$/); if (!m) return;
   const id = decodeURIComponent(m[1]);
-  filtro.chat = filtro.tipo = filtro.estado = filtro.categoria = filtro.q = ''; $('buscar').value = ''; render();
+  filtro.chat = filtro.tipo = filtro.estado = filtro.categoria = filtro.q = filtro.desde = filtro.hasta = ''; $('buscar').value = ''; $('fDesde').value = $('fHasta').value = ''; fechasUI(); render();
   const t = document.getElementById('e-' + id);
   if (t){ t.scrollIntoView({block: 'center'}); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 2800); }
 }
@@ -801,7 +809,7 @@ $('qCode').onkeydown = ev => { if (ev.key === 'Enter') buscarCodigo(); };
 
 /* ---------- Exportar lo que se ve ---------- */
 function descripcionFiltro(){
-  const p = [filtro.categoria && 'categoría ' + filtro.categoria, filtro.chat && 'chat ' + filtro.chat, filtro.tipo && 'tipo ' + filtro.tipo, filtro.estado && 'estado ' + filtro.estado, filtro.q && 'búsqueda «' + filtro.q + '»'].filter(Boolean);
+  const p = [filtro.categoria && 'categoría ' + filtro.categoria, filtro.chat && 'chat ' + filtro.chat, filtro.tipo && 'tipo ' + filtro.tipo, filtro.estado && 'estado ' + filtro.estado, filtro.q && 'búsqueda «' + filtro.q + '»', filtro.desde && 'desde ' + filtro.desde, filtro.hasta && 'hasta ' + filtro.hasta].filter(Boolean);
   return p.length ? p.join(' · ') : 'sin filtros';
 }
 function entradasMd(vis){
