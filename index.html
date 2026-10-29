@@ -47,7 +47,7 @@ button.pri{background:var(--acc2);border-color:var(--acc2);color:#fff}
 .entry h3,.entry .meta{overflow-wrap:anywhere}
 details{margin-top:8px}summary{cursor:pointer;color:var(--mute);font-size:13px}
 pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;font:12.5px/1.5 ui-monospace,Consolas,monospace;margin:8px 0 0}
-.sugs{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-top:-4px}.sugl{font-size:12px;color:var(--mute)}.chip.sm{padding:3px 11px;font-size:13px}
+.sugs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sugl{font-size:12px;color:var(--mute)}.chip.sm{padding:3px 11px;font-size:13px}
 .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tag{font:11px ui-monospace,Consolas,monospace;color:var(--mute)}
 .actions{display:flex;gap:6px;margin-top:10px}
@@ -212,8 +212,8 @@ dialog textarea{min-height:90px;resize:vertical}
     <label>Título<input name="titulo" required></label>
     <label>Resumen<textarea name="resumen" required></textarea></label>
     <label>Detalle / código (opcional)<textarea name="detalle"></textarea></label>
-    <label>Tags (separados por coma)<input name="tags" autocomplete="off"></label>
-    <div class="sugs"><span class="sugl">Sugeridas:</span><span id="tagSug" class="chips"></span></div>
+    <input type="hidden" name="tags">
+    <div class="sugs"><span class="sugl">Tags:</span><span id="tagSug" class="chips"></span></div>
     <div class="bar" style="justify-content:flex-end">
       <button type="button" id="cancelar">Cancelar</button>
       <button class="pri" type="submit">Guardar</button>
