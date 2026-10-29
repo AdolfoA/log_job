@@ -348,5 +348,22 @@
       "SP00",
       "puesto 2001"
     ]
+  },
+  {
+    "id": "2026-10-29-001",
+    "fecha": "2026-10-29",
+    "chat": "Adolfo [Modelo costo agua]",
+    "categoria": "Documentación",
+    "tipo": "Cambio",
+    "estado": "Hecho",
+    "titulo": "Documento «Transformación de unidades» creado y subido a la carpeta documentos/",
+    "resumen": "Se creó el documento que explica cómo el modelo Costo Plan con Cascadeo transforma las unidades: nomenclatura, tablas fuente, enfoques Maestro y Componente, fórmulas, ejemplos resueltos, el caso BA021738 y los puntos abiertos. Se guardó en la nueva carpeta documentos/ de log_job (Markdown, también disponible como documento exportable a Word) y se agregó el selector «AdolfoA/log_job · documentos/ (público)» en la pestaña Código para leerlo.",
+    "detalle": "Archivo: documentos/Transformacion-de-unidades-Modelo-Costo-Plan-Cascadeo.md. El repo es público: lo subido ahí es visible para cualquiera. Decisión del usuario: ubicarlo en log_job y no en CBC.",
+    "tags": [
+      "documentos",
+      "unidades",
+      "Maestro",
+      "Componente"
+    ]
   }
 ]
