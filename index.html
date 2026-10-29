@@ -149,10 +149,9 @@ dialog textarea{min-height:90px;resize:vertical}
       <label class="sel">Desde <input type="date" id="fDesde"></label>
       <label class="sel">Hasta <input type="date" id="fHasta"></label>
       <button id="fFecha" title="Quitar filtro de fechas" hidden>Quitar fechas</button>
-      <select id="orden"><option value="cat">Por categoría</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
+      <select id="orden"><option value="cat">Agrupar por tipo</option><option value="desc">Más recientes</option><option value="asc">Más antiguas</option></select>
       <select id="expSel" title="Exportar lo que se ve"><option value="">Exportar…</option><option value="md">Markdown (.md)</option><option value="pdf">PDF (imprimir)</option></select>
     </div>
-    <div class="chips" id="cats"></div>
     <div class="chips" id="chats"></div>
     <div class="chips" id="tipos"></div>
   </div>
@@ -202,8 +201,6 @@ dialog textarea{min-height:90px;resize:vertical}
 <dialog id="dlg">
   <form method="dialog" id="form">
     <h2 style="margin:0" id="dlgTitulo">Nueva entrada</h2>
-    <label>Categoría<input name="categoria" list="catsList" placeholder="Modelo de costos" required></label>
-    <datalist id="catsList"></datalist>
     <label>Chat<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]" required></label>
     <datalist id="chatsList"></datalist>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
@@ -226,7 +223,7 @@ dialog textarea{min-height:90px;resize:vertical}
 const LS = 'adolfo-log-local-v1';
 let base = [];            // entradas del repo (data/entries.json)
 let locales = [];         // entradas creadas/editadas en este navegador
-let filtro = {chat:'', tipo:'', categoria:'', estado:'', q:'', desde:'', hasta:'', orden:'cat'};
+let filtro = {chat:'', tipo:'', estado:'', q:'', desde:'', hasta:'', orden:'cat'};
 let editando = null;
 
 const $ = id => document.getElementById(id);
@@ -283,10 +280,7 @@ function render(){
   const data = todas();
   const chatsU = [...new Set(data.map(e => e.chat))].sort();
   const tiposU = [...new Set(data.map(e => e.tipo))].sort();
-  const catsU = [...new Set(data.map(e => e.categoria || 'Sin categoría'))].sort();
-  chips($('cats'), catsU, 'categoria');
   chips($('chats'), chatsU, 'chat');
-  $('catsList').replaceChildren(...catsU.map(c => { const o = el('option'); o.value = c; return o; }));
   const tc = $('tipos'); tc.replaceChildren();
   const mk = (t, on, fn) => { const ch = el('span','chip' + (on ? ' on' : ''), t); ch.onclick = fn; tc.append(ch); };
   mk('Todos', !filtro.tipo && !filtro.estado, () => { filtro.tipo = ''; filtro.estado = ''; render(); });
@@ -301,10 +295,9 @@ function render(){
     (!filtro.tipo || e.tipo === filtro.tipo) &&
     (!filtro.estado || e.estado === filtro.estado) &&
     (!filtro.desde || e.fecha >= filtro.desde) && (!filtro.hasta || e.fecha <= filtro.hasta) &&
-    (!filtro.categoria || (e.categoria || 'Sin categoría') === filtro.categoria) &&
     (!q || [e.titulo, e.resumen, e.detalle, (e.tags||[]).join(' '), e.chat].join(' ').toLowerCase().includes(q))
   ).sort((a,b) => filtro.orden === 'cat'
-    ? (a.categoria||'Sin categoría').localeCompare(b.categoria||'Sin categoría') || (b.fecha + b.id).localeCompare(a.fecha + a.id)
+    ? a.tipo.localeCompare(b.tipo) || (b.fecha + b.id).localeCompare(a.fecha + a.id)
     : (a.fecha + a.id).localeCompare(b.fecha + b.id) * (filtro.orden === 'asc' ? 1 : -1));
 
   const st = $('stats'); st.replaceChildren();
@@ -316,11 +309,11 @@ function render(){
   ultimaVista = vis;
   let ultimaCat = null;
   vis.forEach(e => {
-    if (filtro.orden === 'cat' && (e.categoria||'Sin categoría') !== ultimaCat){ ultimaCat = e.categoria||'Sin categoría'; const gh = el('h2','grupo'); colorear(gh, 'categoria', ultimaCat); gh.classList.remove('k'); gh.style.color = 'color-mix(in srgb,var(--c) 70%,var(--text))'; L.append(gh); }
+    if (filtro.orden === 'cat' && e.tipo !== ultimaCat){ ultimaCat = e.tipo; const gh = el('h2','grupo'); colorear(gh, 'tipo', ultimaCat); gh.classList.remove('k'); gh.style.color = 'color-mix(in srgb,var(--c) 70%,var(--text))'; L.append(gh); }
     const c = el('article','entry' + (e.estado === 'Abierto' ? ' open-state' : e.estado === 'Resuelto' ? ' resolved-state' : ''));
     c.id = 'e-' + e.id;
     const m = el('div','meta');
-    m.append(colorear(el('span','badge'), 'tipo', e.tipo), colorear(el('span','badge'), 'categoria', e.categoria||'Sin categoría'), el('span',null,e.fecha), colorear(el('span','badge'), 'chat', e.chat), colorear(el('span','badge'), 'estado', e.estado));
+    m.append(colorear(el('span','badge'), 'tipo', e.tipo), el('span',null,e.fecha), colorear(el('span','badge'), 'chat', e.chat), colorear(el('span','badge'), 'estado', e.estado));
     c.append(m, el('h3',null,e.titulo), el('p',null,e.resumen));
     if (e.detalle){ const d = el('details'); d.append(el('summary',null,'Ver detalle / código'), el('pre',null,e.detalle)); c.append(d); }
     if ((e.tags||[]).length){ const t = el('div','tags'); e.tags.forEach(x => t.append(el('span','tag','#'+x))); c.append(t); }
@@ -353,8 +346,8 @@ function abrir(e){
   editando = e || null;
   const f = $('form'); f.reset();
   $('dlgTitulo').textContent = e ? 'Editar entrada' : 'Nueva entrada';
-  const v = e || {categoria: filtro.categoria, fecha: new Date().toISOString().slice(0,10), chat: filtro.chat, tipo:'Cambio', estado:'Hecho', tags:[]};
-  ['chat','categoria','fecha','tipo','estado','titulo','resumen','detalle'].forEach(k => f.elements[k].value = v[k] || '');
+  const v = e || {fecha: new Date().toISOString().slice(0,10), chat: filtro.chat, tipo:'Cambio', estado:'Hecho', tags:[]};
+  ['chat','fecha','tipo','estado','titulo','resumen','detalle'].forEach(k => f.elements[k].value = v[k] || '');
   f.elements.tags.value = (v.tags||[]).join(', ');
   $('dlg').showModal();
 }
@@ -363,7 +356,7 @@ $('form').addEventListener('submit', ev => {
   const f = ev.target.elements;
   const e = {
     id: editando ? editando.id : nuevoId(f.fecha.value),
-    fecha: f.fecha.value, chat: f.chat.value.trim(), categoria: f.categoria.value.trim(), tipo: f.tipo.value, estado: f.estado.value,
+    fecha: f.fecha.value, chat: f.chat.value.trim(), categoria: editando && editando.categoria || '', tipo: f.tipo.value, estado: f.estado.value,
     titulo: f.titulo.value.trim(), resumen: f.resumen.value.trim(), detalle: f.detalle.value,
     tags: f.tags.value.split(',').map(s => s.trim()).filter(Boolean)
   };
@@ -791,7 +784,7 @@ $('vlink').onclick = async ev => {
 function irAEntrada(){
   const m = location.hash.match(/^#e=(.+)$/); if (!m) return;
   const id = decodeURIComponent(m[1]);
-  filtro.chat = filtro.tipo = filtro.estado = filtro.categoria = filtro.q = filtro.desde = filtro.hasta = ''; $('buscar').value = ''; $('fDesde').value = $('fHasta').value = ''; fechasUI(); render();
+  filtro.chat = filtro.tipo = filtro.estado = filtro.q = filtro.desde = filtro.hasta = ''; $('buscar').value = ''; $('fDesde').value = $('fHasta').value = ''; fechasUI(); render();
   const t = document.getElementById('e-' + id);
   if (t){ t.scrollIntoView({block: 'center'}); t.classList.add('flash'); setTimeout(() => t.classList.remove('flash'), 2800); }
 }
@@ -831,16 +824,16 @@ $('qCode').onkeydown = ev => { if (ev.key === 'Enter') buscarCodigo(); };
 /* ---------- Exportar lo que se ve ---------- */
 $("expSel").onchange = ev => { const v = ev.target.value; ev.target.value = ''; if (v === 'md') expMd(); else if (v === 'pdf') expPdf(); };
 function descripcionFiltro(){
-  const p = [filtro.categoria && 'categoría ' + filtro.categoria, filtro.chat && 'chat ' + filtro.chat, filtro.tipo && 'tipo ' + filtro.tipo, filtro.estado && 'estado ' + filtro.estado, filtro.q && 'búsqueda «' + filtro.q + '»', filtro.desde && 'desde ' + filtro.desde, filtro.hasta && 'hasta ' + filtro.hasta].filter(Boolean);
+  const p = [filtro.chat && 'chat ' + filtro.chat, filtro.tipo && 'tipo ' + filtro.tipo, filtro.estado && 'estado ' + filtro.estado, filtro.q && 'búsqueda «' + filtro.q + '»', filtro.desde && 'desde ' + filtro.desde, filtro.hasta && 'hasta ' + filtro.hasta].filter(Boolean);
   return p.length ? p.join(' · ') : 'sin filtros';
 }
 function entradasMd(vis){
   const out = ['# Bitácora Adolfo', '', 'Generado: ' + new Date().toISOString().slice(0, 10) + ' · ' + vis.length + ' entradas · ' + descripcionFiltro(), ''];
   let cat = null;
   vis.forEach(e => {
-    const c = e.categoria || 'Sin categoría';
+    const c = e.tipo;
     if (filtro.orden === 'cat' && c !== cat){ cat = c; out.push('## ' + c, ''); }
-    out.push('### ' + e.titulo, '', '*' + [e.tipo, e.estado, e.fecha, e.chat, filtro.orden === 'cat' ? '' : c].filter(Boolean).join(' · ') + '*', '', e.resumen, '');
+    out.push('### ' + e.titulo, '', '*' + [filtro.orden === 'cat' ? '' : e.tipo, e.estado, e.fecha, e.chat].filter(Boolean).join(' · ') + '*', '', e.resumen, '');
     if (e.detalle) out.push('~~~', e.detalle, '~~~', '');
     if ((e.tags || []).length) out.push(e.tags.map(t => '#' + t).join(' '), '');
   });
@@ -863,10 +856,10 @@ const expPdf = () => {
   d.body.append(e2('h1', '', 'Bitácora Adolfo'), e2('div', 'sub', 'Generado: ' + new Date().toISOString().slice(0, 10) + ' · ' + ultimaVista.length + ' entradas · ' + descripcionFiltro()));
   let cat = null;
   ultimaVista.forEach(e => {
-    const c = e.categoria || 'Sin categoría';
+    const c = e.tipo;
     if (filtro.orden === 'cat' && c !== cat){ cat = c; d.body.append(e2('h2', '', c)); }
     const box = e2('div', 'e');
-    box.append(e2('h3', '', e.titulo), e2('div', 'm', [e.tipo, e.estado, e.fecha, e.chat, filtro.orden === 'cat' ? '' : c].filter(Boolean).join(' · ')), e2('p', '', e.resumen));
+    box.append(e2('h3', '', e.titulo), e2('div', 'm', [filtro.orden === 'cat' ? '' : e.tipo, e.estado, e.fecha, e.chat].filter(Boolean).join(' · ')), e2('p', '', e.resumen));
     if (e.detalle) box.append(e2('pre', '', e.detalle));
     if ((e.tags || []).length) box.append(e2('div', 't', e.tags.map(t => '#' + t).join(' ')));
     d.body.append(box);
