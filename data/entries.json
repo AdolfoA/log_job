@@ -455,5 +455,20 @@
    "Cambio",
    "Resuelto"
   ]
+ },
+ {
+  "id": "2026-11-02-006",
+  "fecha": "2026-11-02",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Site (pestaña Código): los archivos Word/Excel/PDF se ven con su versión y se pueden descargar",
+  "resumen": "En la pestaña Código del site, los archivos binarios (.docx, .xlsx, .pptx, .pdf) ahora aparecen como una ficha con nombre, versión (tomada del nombre, p. ej. 1.40), revisión en el repo, tamaño, autor, fecha, la lista de revisiones y los enlaces «Abrir en GitHub», «Descargar» e «Historial». Además, todos los archivos del visor tienen un botón «Descargar» que baja la versión elegida.",
+  "detalle": "Motivo: la Documentación Costos Plan v1.40 (.docx) no se veía en el visor. La causa real fue el caché de 5 minutos de las consultas a GitHub, no un filtro de tipo de archivo: el visor sí lista los binarios, pero al abrirlos intentaba leerlos como texto (y el .docx, de 1,5 MB, superaba el límite de 1.500.000 bytes). Esto corrige lo anotado en la entrada 2026-11-02-005 y en documentos/README.md, que decían que la pestaña no lo muestra. Cambios en index.html: ficha de documento para binarios, ocultar Copiar, Exportar PDF y Ver cambios en esos archivos, y función de descarga que usa raw.githubusercontent.com en repos públicos y la API de contenidos con token en privados; si falla, abre el archivo en GitHub. Si la revisión elegida no es la actual, el archivo baja con el sufijo _revN. La versión se lee del nombre del archivo: si sube a v1.41, hay que renombrarlo. Commits en main de AdolfoA/log_job: 1e68451 (ficha de documento y corrección del README de documentos/) y d9cda1a (botón Descargar). No se probó en un navegador; solo se verificó la sintaxis del script.",
+  "tags": [
+   "Cambio",
+   "Resuelto"
+  ]
  }
 ]
