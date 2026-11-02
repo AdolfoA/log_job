@@ -89,6 +89,13 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .sitecm p{margin:6px 0 0;color:var(--mute);font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
 .sitecm .cm{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font:11.5px ui-monospace,Consolas,monospace;color:var(--mute)}
 .sitecm .cm a{color:var(--info);text-decoration:none}
+.sviewer{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:14px}
+.sviewer .vb{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.sviewer select{flex:1 1 280px;min-width:0}
+.sframewrap{background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:auto;display:flex;justify-content:center;padding:0}
+.sframewrap iframe{border:0;background:#fff;width:100%;height:72vh}
+.sframewrap.movil iframe{width:390px}
+.sitecm button.ver{margin-left:auto;padding:1px 10px;font-size:12px}
 [hidden]{display:none!important}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--mute);cursor:pointer}
@@ -250,6 +257,18 @@ dialog textarea{min-height:90px;resize:vertical}
       <label class="sel"><input type="checkbox" id="sTodos"> Incluir commits de entradas de la bitácora</label>
       <button id="sRec">Actualizar</button>
       <a id="sGh" target="_blank" rel="noopener" style="color:var(--info)">Ver en GitHub</a>
+    </div>
+    <div class="sviewer" id="sViewer" hidden>
+      <div class="vb">
+        <button id="sPrev" title="Versión anterior">◀</button>
+        <select id="sSel" aria-label="Versión del site"></select>
+        <button id="sNext" title="Versión siguiente">▶</button>
+        <button id="sMov">Ver en móvil</button>
+        <a id="sAbrir" target="_blank" rel="noopener" style="color:var(--info)">Código en GitHub</a>
+        <button id="sCerrar">Cerrar visor</button>
+      </div>
+      <div class="sframewrap" id="sWrap"><iframe id="sFrame" sandbox="allow-scripts allow-popups" title="Versión del site"></iframe></div>
+      <p class="note" style="margin:8px 0 0">Muestra la página tal como estaba en ese commit, con las entradas de la bitácora de ese momento. Corre aislada: no usa tus datos locales ni tu token.</p>
     </div>
     <div class="stats" id="sStats"></div>
     <div id="sLista"></div>
@@ -1111,10 +1130,42 @@ function sitePintar(){
     if (c.desc) card.append(el('p',null,c.desc));
     const m = el('div','cm'); m.append(el('span',null,new Date(c.fecha).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})), el('span',null,c.autor));
     const a = el('a',null,c.sha.slice(0,7)); a.href = c.url; a.target = '_blank'; a.rel = 'noopener'; m.append(a);
+    const vb = el('button','ver','Ver esta versión'); vb.onclick = () => sVer(c.sha); m.append(vb);
     card.append(m); box.append(card);
   });
 }
-$('sTodos').onchange = siteCargar; $('sBuscar').oninput = sitePintar;
+
+const sHtml = new Map();
+async function sVer(sha){
+  const v = $('sViewer'); v.hidden = false;
+  const lista = siteData[$('sTodos').checked ? 'all' : 'site'] || [];
+  const sel = $('sSel');
+  if (!sel.dataset.k || sel.dataset.k !== (lista[0] ? lista[0].sha + lista.length : '')){
+    sel.replaceChildren(); sel.dataset.k = lista[0] ? lista[0].sha + lista.length : '';
+    lista.forEach((c, i) => { const o = el('option', null, 'v' + (lista.length - i) + (i === 0 ? ' (actual)' : '') + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0].slice(0,70) + ' · ' + c.sha.slice(0,7)); o.value = c.sha; sel.append(o); });
+  }
+  sel.value = sha;
+  $('sAbrir').href = 'https://github.com/' + SITE_REPO + '/blob/' + sha + '/index.html';
+  const fr = $('sFrame'); let html = sHtml.get(sha);
+  try {
+    if (!html){
+      fr.srcdoc = '<body style="font:14px system-ui;padding:20px;color:#555">Cargando versión…</body>';
+      const r = await fetch('https://raw.githubusercontent.com/' + SITE_REPO + '/' + sha + '/index.html');
+      if (!r.ok) throw new Error('GitHub respondió ' + r.status + '.');
+      html = await r.text(); sHtml.set(sha, html);
+    }
+    if (sel.value !== sha) return;
+    const base = '<base href="https://raw.githubusercontent.com/' + SITE_REPO + '/' + sha + '/">';
+    fr.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + base) : base + html;
+  } catch (e) { fr.srcdoc = '<body style="font:14px system-ui;padding:20px;color:#b00">' + String(e.message).replace(/</g,'&lt;') + '</body>'; }
+  v.scrollIntoView({block:'nearest'});
+}
+$('sSel').onchange = e => sVer(e.target.value);
+$('sPrev').onclick = () => { const o = $('sSel'); if (o.selectedIndex < o.options.length - 1){ o.selectedIndex++; sVer(o.value); } };
+$('sNext').onclick = () => { const o = $('sSel'); if (o.selectedIndex > 0){ o.selectedIndex--; sVer(o.value); } };
+$('sMov').onclick = () => { const m = $('sWrap').classList.toggle('movil'); $('sMov').textContent = m ? 'Ver en escritorio' : 'Ver en móvil'; };
+$('sCerrar').onclick = () => { $('sViewer').hidden = true; $('sFrame').srcdoc = ''; };
+$('sTodos').onchange = () => { $('sSel').dataset.k = ''; $('sViewer').hidden = true; siteCargar(); }; $('sBuscar').oninput = sitePintar;
 $('sRec').onclick = () => { siteData = {}; siteCargar(); };
 
 let codigoIniciado = false;
