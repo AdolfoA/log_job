@@ -425,5 +425,20 @@
    "Cambio",
    "Resuelto"
   ]
+ },
+ {
+  "id": "2026-11-02-004",
+  "fecha": "2026-11-02",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Bitácora: nuevas pestañas Pendientes y Site, historial en el visor de código y archivo de traspaso",
+  "resumen": "Se agregaron la pestaña Pendientes (tablero No iniciado / En progreso / Hecho, ámbito Trabajo o Personal, tags fijos, datos solo en el navegador) y la pestaña Site (historial de commits del sitio con visor de cada versión). El visor de código ahora lista el historial del archivo para elegir versión. Se creó en el repo privado CBC el archivo contexto/HANDOFF_CLAUDE.md para retomar el trabajo desde otra sesión.",
+  "detalle": "La tarea programada de revisión diaria figura como ejecutada pero no ha registrado entradas (no existe data/ultima_revision.json); el traspaso indica que una sesión nueva debe crearla en su propia cuenta y verificar que tenga búsqueda de chats.",
+  "tags": [
+   "Cambio",
+   "Resuelto"
+  ]
  }
 ]
