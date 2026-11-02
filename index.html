@@ -127,6 +127,7 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .cl.add{background:#10b98122}.cl.add .tx::before{content:'+ ';color:var(--acc)}
 .cl.del{background:#ef444422}.cl.del .tx::before{content:'- ';color:var(--bad)}
 .cl.ctx .tx::before{content:'  '}
+.doccard{padding:18px;display:grid;gap:10px}.doccard h3{margin:0;font-size:1.1em;overflow-wrap:anywhere}.doccard .dv{display:inline-block;background:var(--acc);color:#04130e;border-radius:999px;padding:2px 10px;font-weight:700;font-size:12.5px}.doccard .dm{color:var(--mute);font-size:13px}.doccard .da{display:flex;gap:8px;flex-wrap:wrap}.doccard .da a{padding:7px 12px;border:1px solid var(--line);border-radius:8px;color:var(--info);text-decoration:none}.doccard ul{margin:0;padding-left:1.2em;font-size:13px}.doccard li{margin:.25em 0}
 .vmsg{padding:24px;text-align:center;color:var(--mute)}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mute)}
 .chk input{padding:0}
@@ -796,6 +797,35 @@ function pintarArbol(n, cont, nivel){
     b.onclick = () => abrirArchivo(f); cont.append(b);
   });
 }
+const BIN_RE = /\.(docx?|xlsx?|pptx?|pdf)$/i;
+function tamano(n){ return n == null ? '' : n >= 1048576 ? (n/1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB'; }
+function versionDeNombre(path){ const m = path.split('/').pop().match(/[_\-. ]v(\d+(?:\.\d+)+)/i); return m ? m[1] : ''; }
+function mostrarDocumento(f, c){
+  const total = code.commits.length, nom = f.full.split('/').pop(), ver = versionDeNombre(nom);
+  const base = 'https://github.com/' + code.src.repo;
+  const card = el('div', 'doccard');
+  card.append(el('h3', null, '📄 ' + nom));
+  const fila = el('div');
+  if (ver) fila.append(el('span', 'dv', 'Versión ' + ver + ' (en el nombre)'), document.createTextNode(' '));
+  fila.append(el('span', 'dm', 'Revisión v' + (total - code.idx) + ' de ' + total + (code.idx === 0 ? ' (actual)' : '') + ' en el repo'));
+  card.append(fila);
+  card.append(el('div', 'dm', [tamano(code.idx === 0 ? f.size : null), c.commit.author.name, c.commit.author.date.slice(0,10), c.commit.message.split('\n')[0]].filter(Boolean).join(' · ')));
+  const acc = el('div', 'da');
+  [['Abrir en GitHub', base + '/blob/' + c.sha + '/' + f.full], ['Descargar', base + '/raw/' + c.sha + '/' + f.full], ['Historial', base + '/commits/' + code.branch + '/' + f.full]].forEach(([t, u]) => {
+    const a = el('a', null, t); a.href = u; a.target = '_blank'; a.rel = 'noopener'; acc.append(a);
+  });
+  card.append(acc);
+  card.append(el('div', 'dm', 'Es un archivo binario: el visor no muestra su contenido, pero aquí ves que existe, su versión y su historial. Para leerlo, ábrelo o descárgalo.'));
+  if (total > 1){
+    const ul = el('ul');
+    code.commits.forEach((k, i) => {
+      const li = el('li'), a = el('a', null, 'v' + (total - i) + (i === 0 ? ' (actual)' : '') + ' · ' + k.commit.author.date.slice(0,10) + ' · ' + k.commit.message.split('\n')[0].slice(0,70));
+      a.href = base + '/raw/' + k.sha + '/' + f.full; a.target = '_blank'; a.rel = 'noopener'; li.append(a); ul.append(li);
+    });
+    card.append(el('div', 'dm', 'Todas las revisiones:'), ul);
+  }
+  $('vinfo').hidden = true; $('vcode').replaceChildren(card);
+}
 async function abrirArchivo(f, opt){
   code.archivo = f; code.linea = 0; crumb();
   document.querySelectorAll('.fbtn').forEach(b => b.classList.toggle('on', b.dataset.full === f.full));
@@ -814,6 +844,8 @@ async function abrirArchivo(f, opt){
     $('vhist').href = 'https://github.com/' + code.src.repo + '/commits/' + code.branch + '/' + f.full;
     $('vbar').hidden = false;
     $('vmodoL').hidden = !/\.(ipynb|md)$/i.test(f.full);
+    const bin = BIN_RE.test(f.full);
+    $('vcopiar').hidden = $('vpdf').hidden = bin; $('vdiff').parentElement.hidden = bin; if (bin) $('vmodoL').hidden = true;
     if (opt && opt.linea){ $('vdiff').checked = false; $('vmodo').disabled = false; $('vmodo').value = 'cod'; code.ir = opt.linea; } else code.ir = 0;
     actualizarHash(opt && opt.linea);
     await mostrarVersion();
@@ -845,6 +877,7 @@ async function mostrarVersion(){
   const c = code.commits[code.idx]; if (!c){ msg('Este archivo no tiene historial en esta rama.'); return; }
   const f = code.archivo;
   $('vgh').href = 'https://github.com/' + code.src.repo + '/blob/' + c.sha + '/' + f.full;
+  if (BIN_RE.test(f.full)){ mostrarDocumento(f, c); return; }
   if (code.size > 1500000){ msg('Archivo muy grande para mostrarlo aquí. Ábrelo con «Ver en GitHub».'); return; }
   try {
     const orig = await rawFile(c.sha, f.full);

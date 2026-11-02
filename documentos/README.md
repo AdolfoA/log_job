@@ -7,4 +7,4 @@ Este repo es público: cualquiera con el link puede ver lo que se suba aquí. No
 ## Contenido
 
 - `Transformacion-de-unidades-Modelo-Costo-Plan-Cascadeo.md`: cómo el modelo transforma las unidades (enfoques Maestro y Componente, factores, fórmulas, ejemplos y caso BA021738).
-- `Documentacion_Modelo_Costos_Plan_Cascadeo_Databricks_v1.40.docx`: documentación técnica del modelo de costos plan con cascadeo (versión 1.40, 02.11.2026), incluye el capítulo 12 del disparador desde SAP. Es un archivo Word: se descarga o se abre con «Ver en GitHub»; la pestaña Código no lo muestra.
+- `Documentacion_Modelo_Costos_Plan_Cascadeo_Databricks_v1.40.docx`: documentación técnica del modelo de costos plan con cascadeo (versión 1.40, 02.11.2026), incluye el capítulo 12 del disparador desde SAP. Es un archivo Word: en la pestaña Código aparece en la lista con su versión, su historial y los enlaces «Abrir en GitHub» y «Descargar»; el contenido se lee abriéndolo o descargándolo.
