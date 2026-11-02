@@ -440,5 +440,20 @@
    "Cambio",
    "Resuelto"
   ]
+ },
+ {
+  "id": "2026-11-02-005",
+  "fecha": "2026-11-02",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Documentación",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Documentación Costos Plan v1.40 subida a documentos/ del repo público",
+  "resumen": "Se subió el Word «Documentación - Modelo Costos Plan Cascadeo - Databricks» versión 1.40 (02.11.2026) a la carpeta documentos/ de AdolfoA/log_job, a pedido del usuario. Incluye el capítulo 12 sobre el disparador desde SAP.",
+  "detalle": "Antes de subirlo se buscaron claves, tokens, firmas de acceso y cadenas de conexión en el texto del documento y no se encontró ninguna. El repo es público: el documento contiene rutas internas, nombres de recursos de Azure y de SAP. Es un archivo Word, así que la pestaña Código no lo muestra; se descarga o se abre con «Ver en GitHub».",
+  "tags": [
+   "Cambio",
+   "Resuelto"
+  ]
  }
 ]
