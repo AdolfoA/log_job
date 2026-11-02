@@ -53,6 +53,36 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .actions{display:flex;gap:6px;margin-top:10px}
 .actions button{padding:3px 10px;font-size:12px}
 .grupo{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin:22px 0 8px;font-family:ui-monospace,Consolas,monospace}
+
+.pend-top{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:none;background:none;border-radius:999px;padding:5px 14px;color:var(--mute);font-size:13px}
+.seg button.on{background:var(--panel2);color:var(--text);box-shadow:0 0 0 1px var(--line) inset}
+.pend-top input[type=search]{flex:1 1 220px;min-width:180px}
+.board{display:grid;grid-template-columns:repeat(3,minmax(250px,1fr));gap:12px;align-items:start;overflow-x:auto;padding-bottom:6px}
+.col{border-radius:14px;padding:10px;border:1px solid var(--line);background:color-mix(in srgb,var(--c) 7%,var(--panel2));min-height:140px}
+.col.over{outline:2px dashed var(--c);outline-offset:-4px}
+.col h4{margin:0 0 10px;display:flex;align-items:center;gap:8px;font-weight:500}
+.colpill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 10px;border-radius:6px;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.colpill::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.col .cnt{margin-left:auto;font:12px ui-monospace,Consolas,monospace;color:var(--mute)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:grab}
+.card:hover{border-color:var(--acc)}
+.card.drag{opacity:.4}
+.card b{display:block;font-weight:600;overflow-wrap:anywhere}
+.card p{margin:4px 0 0;font-size:13px;color:var(--mute);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .cm{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;font:11.5px ui-monospace,Consolas,monospace;color:var(--mute)}
+.pb{border:1px solid var(--line);border-radius:6px;padding:0 7px}
+.pb.Trabajo{color:var(--info);border-color:color-mix(in srgb,var(--info) 50%,var(--line))}
+.pb.Personal{color:#c084fc;border-color:color-mix(in srgb,#c084fc 50%,var(--line))}
+.pr-Alta{color:var(--bad)}.pr-Media{color:var(--warn)}.pr-Baja{color:var(--mute)}
+.late{color:var(--bad)}
+.card .mv{margin-left:auto;display:flex;gap:4px}
+.card .mv button{padding:0 7px;font-size:12px;line-height:20px;border-radius:6px}
+.lbl{display:grid;gap:6px;font-size:13px;color:var(--mute)}
+.addp{display:block;width:100%;text-align:left;background:none;border:1px dashed var(--line);color:var(--mute);border-radius:10px;padding:9px 12px}
+.addp:hover{color:var(--c);border-color:var(--c)}
+@media (max-width:760px){.board{grid-template-columns:repeat(3,82vw)}}
 [hidden]{display:none!important}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--mute);cursor:pointer}
@@ -147,6 +177,7 @@ dialog textarea{min-height:90px;resize:vertical}
   <div class="tabs">
     <button class="tab on" id="tabLog">Bitácora</button>
     <button class="tab" id="tabCodigo">Código</button>
+    <button class="tab" id="tabPend">Pendientes</button>
   </div>
 
   <div id="vistaLog">
@@ -206,7 +237,35 @@ dialog textarea{min-height:90px;resize:vertical}
     </div>
     <p class="note">Lee los repos con la API de GitHub. Repos públicos: hasta 60 consultas por hora; con token, 5.000. Los resultados se guardan 5 minutos en este navegador.</p>
   </div>
+  <div id="vistaPend" hidden>
+    <div class="pend-top">
+      <div class="seg" id="pAmb"><button data-v="" class="on">Todo</button><button data-v="Trabajo">Trabajo</button><button data-v="Personal">Personal</button></div>
+      <input type="search" id="pBuscar" placeholder="Buscar en pendientes…">
+      <button class="pri" id="pNuevo">+ Nuevo pendiente</button>
+      <button id="pExp">Exportar</button><button id="pImp">Importar</button><input type="file" id="pFile" accept=".json" hidden>
+    </div>
+    <div class="board" id="board"></div>
+    <p class="note">Los pendientes se guardan solo en este navegador (no se suben al repo, que es público). Usa Exportar para respaldarlos o llevarlos a otro equipo. Arrastra las tarjetas entre columnas o usa las flechas.</p>
+  </div>
 </div>
+
+<dialog id="pDlg"><form method="dialog" id="pForm">
+    <h2 style="margin:0" id="pDlgT">Nuevo pendiente</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <label>Ámbito<select name="ambito"><option>Trabajo</option><option>Personal</option></select></label>
+      <label>Estado<select name="estado"><option>No iniciado</option><option>En progreso</option><option>Hecho</option></select></label>
+      <label>Prioridad<select name="prioridad"><option>Media</option><option>Alta</option><option>Baja</option></select></label>
+    </div>
+    <label>Título<input name="titulo" required></label>
+    <label>Resumen<textarea name="resumen"></textarea></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <label>Chat / origen<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]"></label>
+      <label>Fecha límite<input type="date" name="limite"></label>
+    </div>
+    <div class="lbl">Tags<div class="chips" id="pTags"></div></div>
+    <label>Detalle / código (opcional)<textarea name="detalle"></textarea></label>
+    <div class="bar" style="justify-content:space-between"><button type="button" id="pDel" class="" hidden>Eliminar</button><span class="bar" style="margin-left:auto"><button value="cancel" formnovalidate>Cancelar</button><button class="pri" id="pOk" value="ok">Guardar</button></span></div>
+  </form></dialog>
 
 <dialog id="dlg">
   <form method="dialog" id="form">
@@ -925,15 +984,93 @@ const expPdf = () => {
   w.focus(); setTimeout(() => { try { w.print(); } catch {} }, 400);
 };
 
+
+/* ===== Pendientes (tablero) ===== */
+const PLS = 'bitacora-adolfo-pendientes-v1';
+const COLS = [['No iniciado','#94a3b8'],['En progreso','#38bdf8'],['Hecho','#10b981']];
+const pf = {amb:'', q:''};
+let pend = []; try { pend = JSON.parse(localStorage.getItem(PLS)) || []; } catch {}
+const pSave = () => { try { localStorage.setItem(PLS, JSON.stringify(pend)); } catch {} };
+const pId = () => 'P' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+const PTAGS = ['curso','proyecto','z2h','ocio','documentación','personal'];
+let pSel = new Set();
+pend.forEach(p => { if (p.estado === 'Backlog') p.estado = 'No iniciado'; if (p.ambito === 'Persona') p.ambito = 'Personal'; });
+function pTagsPintar(){
+  const c = $('pTags'); c.replaceChildren();
+  [...PTAGS, ...[...pSel].filter(t => !PTAGS.includes(t))].forEach(t => {
+    const b = el('button', 'chip sm' + (pSel.has(t) ? ' on' : ''), t); b.type = 'button';
+    b.onclick = () => { pSel.has(t) ? pSel.delete(t) : pSel.add(t); pTagsPintar(); }; c.append(b);
+  });
+}
+let pEdit = null, pDragId = null;
+function pMover(id, estado){ const p = pend.find(x => x.id === id); if (!p || p.estado === estado) return; p.estado = estado; p.actualizado = new Date().toISOString().slice(0,10); pSave(); pRender(); }
+function pRender(){
+  const b = $('board'); b.replaceChildren();
+  const q = pf.q.toLowerCase();
+  const vis = pend.filter(p => (!pf.amb || p.ambito === pf.amb) && (!q || [p.titulo,p.resumen,p.detalle,p.chat,(p.tags||[]).join(' ')].join(' ').toLowerCase().includes(q)));
+  const ord = {Alta:0, Media:1, Baja:2};
+  COLS.forEach(([est, color], ci) => {
+    const col = el('div', 'col'); col.style.setProperty('--c', color);
+    const items = vis.filter(p => p.estado === est).sort((a,b) => (ord[a.prioridad]-ord[b.prioridad]) || (a.limite||'9').localeCompare(b.limite||'9'));
+    const h = el('h4'); h.append(el('span','colpill',est), el('span','cnt',String(items.length))); col.append(h);
+    col.ondragover = e => { e.preventDefault(); col.classList.add('over'); };
+    col.ondragleave = () => col.classList.remove('over');
+    col.ondrop = e => { e.preventDefault(); col.classList.remove('over'); if (pDragId) pMover(pDragId, est); pDragId = null; };
+    items.forEach(p => {
+      const c = el('div','card'); c.draggable = true;
+      c.ondragstart = () => { pDragId = p.id; setTimeout(() => c.classList.add('drag'), 0); };
+      c.ondragend = () => c.classList.remove('drag');
+      c.onclick = ev => { if (!ev.target.closest('.mv')) pAbrir(p); };
+      c.append(el('b', null, p.titulo));
+      if (p.resumen) c.append(el('p', null, p.resumen));
+      const m = el('div','cm');
+      m.append(el('span','pb ' + p.ambito, p.ambito), el('span','pr-' + p.prioridad, '● ' + p.prioridad));
+      if (p.limite){ const late = est !== 'Hecho' && p.limite < new Date().toISOString().slice(0,10); m.append(el('span', late ? 'late' : '', '📅 ' + p.limite)); }
+      (p.tags||[]).slice(0,3).forEach(t => m.append(el('span', null, '#' + t)));
+      const mv = el('span','mv');
+      if (ci > 0){ const l = el('button', null, '◀'); l.title = 'Mover a ' + COLS[ci-1][0]; l.onclick = () => pMover(p.id, COLS[ci-1][0]); mv.append(l); }
+      if (ci < COLS.length-1){ const r = el('button', null, '▶'); r.title = 'Mover a ' + COLS[ci+1][0]; r.onclick = () => pMover(p.id, COLS[ci+1][0]); mv.append(r); }
+      m.append(mv); c.append(m); col.append(c);
+    });
+    const add = el('button','addp','+ Nueva página'); add.onclick = () => pAbrir(null, est); col.append(add);
+    b.append(col);
+  });
+}
+function pAbrir(p, estado){
+  pEdit = p; const f = $('pForm').elements;
+  $('pDlgT').textContent = p ? 'Editar pendiente' : 'Nuevo pendiente';
+  f.ambito.value = p ? p.ambito : (pf.amb || 'Trabajo'); f.estado.value = p ? p.estado : (estado || 'No iniciado'); f.prioridad.value = p ? p.prioridad : 'Media';
+  f.titulo.value = p ? p.titulo : ''; f.resumen.value = p ? (p.resumen||'') : ''; f.chat.value = p ? (p.chat||'') : '';
+  f.limite.value = p ? (p.limite||'') : ''; pSel = new Set(p ? (p.tags||[]) : []); pTagsPintar(); f.detalle.value = p ? (p.detalle||'') : '';
+  $('pDel').hidden = !p; $('pDlg').showModal();
+}
+$('pForm').onsubmit = ev => {
+  if (ev.submitter && ev.submitter.value !== 'ok') return;
+  const f = $('pForm').elements, hoy = new Date().toISOString().slice(0,10);
+  const o = {ambito:f.ambito.value, estado:f.estado.value, prioridad:f.prioridad.value, titulo:f.titulo.value.trim(), resumen:f.resumen.value.trim(), chat:f.chat.value.trim(), limite:f.limite.value, detalle:f.detalle.value, tags:[...pSel], actualizado:hoy};
+  if (pEdit) Object.assign(pEdit, o); else pend.push(Object.assign({id:pId(), creado:hoy}, o));
+  pSave(); pRender();
+};
+$('pDel').onclick = () => { if (pEdit && confirm('¿Eliminar este pendiente?')){ pend = pend.filter(x => x !== pEdit); pSave(); pRender(); $('pDlg').close(); } };
+$('pNuevo').onclick = () => pAbrir(null);
+$('pBuscar').oninput = e => { pf.q = e.target.value; pRender(); };
+$('pAmb').onclick = e => { const b = e.target.closest('button'); if (!b) return; pf.amb = b.dataset.v; document.querySelectorAll('#pAmb button').forEach(x => x.classList.toggle('on', x === b)); pRender(); };
+$('pExp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(pend, null, 1)], {type:'application/json'})); a.download = 'pendientes-' + new Date().toISOString().slice(0,10) + '.json'; a.click(); URL.revokeObjectURL(a.href); };
+$('pImp').onclick = () => $('pFile').click();
+$('pFile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(d)) throw 0; const ids = new Set(pend.map(x => x.id)); d.forEach(x => { if (x && x.titulo && !ids.has(x.id)) pend.push(Object.assign({id:pId(), ambito:'Trabajo', estado:'No iniciado', prioridad:'Media'}, x)); }); pSave(); pRender(); } catch { alert('Archivo no válido.'); } e.target.value = ''; };
+
 let codigoIniciado = false;
 function vista(v){
-  document.querySelector('.wrap').classList.toggle('ancho', v === 'codigo');
-  $('sub').textContent = v === 'codigo' ? 'repos (Git)' : 'log de chats';
-  $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo';
-  $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo');
-  try { history.replaceState(null, '', v === 'codigo' ? (code.archivo ? hashDe(code.archivo.full, code.linea) : '#codigo') : location.pathname + location.search); } catch {}
+  document.querySelector('.wrap').classList.toggle('ancho', v !== 'log');
+  $('sub').textContent = v === 'codigo' ? 'repos (Git)' : v === 'pend' ? 'pendientes' : 'log de chats';
+  $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo'; $('vistaPend').hidden = v !== 'pend';
+  $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo'); $('tabPend').classList.toggle('on', v === 'pend');
+  try { history.replaceState(null, '', v === 'codigo' ? (code.archivo ? hashDe(code.archivo.full, code.linea) : '#codigo') : v === 'pend' ? '#pendientes' : location.pathname + location.search); } catch {}
+  ['nuevo','exportar','importar'].forEach(id => $(id).hidden = v === 'pend');
+  if (v === 'pend') pRender();
   if (v === 'codigo' && !codigoIniciado){ codigoIniciado = true; initFuentes(); cargarRepo(); }
 }
+$('tabPend').onclick = () => vista('pend');
 $('tabLog').onclick = () => vista('log');
 $('tabCodigo').onclick = () => vista('codigo');
 (function(){
@@ -942,6 +1079,7 @@ $('tabCodigo').onclick = () => vista('codigo');
     const p = H.slice(3).split('|').map(decodeURIComponent), s = SOURCES.find(x => x.id === p[0]);
     if (s){ code.src = s; code.pend = {branch: p[1], path: p[2], line: +p[3] || 0}; vista('codigo'); }
   } else if (H === '#codigo') vista('codigo');
+  else if (H === '#pendientes') vista('pend');
 })();
 
 cargar().then(irAEntrada);
