@@ -395,5 +395,20 @@
    "Cambio",
    "Resuelto"
   ]
+ },
+ {
+  "id": "2026-11-02-002",
+  "fecha": "2026-11-02",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Documentación",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Documentación Costos Plan: ajustes del usuario aplicados y guardados como versión vigente (sigue en 1.30)",
+  "resumen": "El usuario editó la documentación del Modelo Costos Plan Cascadeo y esa copia quedó guardada como la versión vigente. Cambios: se eliminó la sección 12 (Glosario Técnico) junto con su entrada en la tabla de contenido, se agregó en la sección 4.1 la ruta de SharePoint donde se ubican los archivos Excel de entrada y se modificaron algunas tablas de variables y campos.",
+  "detalle": "La versión del documento se mantiene en 1.30; solo se cambia cuando el usuario lo indique de forma explícita. La lista de centros con enfoque Maestro (sección 7.3) sigue con EP01, EP00, RP00 y RP04 en esta copia, mientras que main también incluye SP01 y SP00.",
+  "tags": [
+   "Cambio",
+   "Resuelto"
+  ]
  }
 ]
