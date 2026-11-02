@@ -79,10 +79,16 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .late{color:var(--bad)}
 .card .mv{margin-left:auto;display:flex;gap:4px}
 .card .mv button{padding:0 7px;font-size:12px;line-height:20px;border-radius:6px}
+.pend-top label.sel{display:flex;flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
 .lbl{display:grid;gap:6px;font-size:13px;color:var(--mute)}
 .addp{display:block;width:100%;text-align:left;background:none;border:1px dashed var(--line);color:var(--mute);border-radius:10px;padding:9px 12px}
 .addp:hover{color:var(--c);border-color:var(--c)}
 @media (max-width:760px){.board{grid-template-columns:repeat(3,82vw)}}
+.sitecm{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--acc2);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.sitecm b{display:block;font-weight:600;overflow-wrap:anywhere}
+.sitecm p{margin:6px 0 0;color:var(--mute);font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.sitecm .cm{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font:11.5px ui-monospace,Consolas,monospace;color:var(--mute)}
+.sitecm .cm a{color:var(--info);text-decoration:none}
 [hidden]{display:none!important}
 .tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 .tab{background:none;border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 14px;color:var(--mute);cursor:pointer}
@@ -178,6 +184,7 @@ dialog textarea{min-height:90px;resize:vertical}
     <button class="tab on" id="tabLog">Bitácora</button>
     <button class="tab" id="tabCodigo">Código</button>
     <button class="tab" id="tabPend">Pendientes</button>
+    <button class="tab" id="tabSite">Site</button>
   </div>
 
   <div id="vistaLog">
@@ -236,6 +243,17 @@ dialog textarea{min-height:90px;resize:vertical}
       </div>
     </div>
     <p class="note">Lee los repos con la API de GitHub. Repos públicos: hasta 60 consultas por hora; con token, 5.000. Los resultados se guardan 5 minutos en este navegador.</p>
+  </div>
+  <div id="vistaSite" hidden>
+    <div class="pend-top">
+      <input type="search" id="sBuscar" placeholder="Buscar en los commits del site…">
+      <label class="sel"><input type="checkbox" id="sTodos"> Incluir commits de entradas de la bitácora</label>
+      <button id="sRec">Actualizar</button>
+      <a id="sGh" target="_blank" rel="noopener" style="color:var(--info)">Ver en GitHub</a>
+    </div>
+    <div class="stats" id="sStats"></div>
+    <div id="sLista"></div>
+    <p class="note">Historial de cambios del sitio (código de esta página), leído de AdolfoA/log_job con la API de GitHub.</p>
   </div>
   <div id="vistaPend" hidden>
     <div class="pend-top">
@@ -1059,18 +1077,59 @@ $('pExp').onclick = () => { const a = document.createElement('a'); a.href = URL.
 $('pImp').onclick = () => $('pFile').click();
 $('pFile').onchange = async e => { try { const d = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(d)) throw 0; const ids = new Set(pend.map(x => x.id)); d.forEach(x => { if (x && x.titulo && !ids.has(x.id)) pend.push(Object.assign({id:pId(), ambito:'Trabajo', estado:'No iniciado', prioridad:'Media'}, x)); }); pSave(); pRender(); } catch { alert('Archivo no válido.'); } e.target.value = ''; };
 
+
+/* ===== Site: historial de commits ===== */
+const SITE_REPO = 'AdolfoA/log_job';
+let siteData = {}, siteCargado = false;
+async function siteCargar(){
+  const todos = $('sTodos').checked, k = todos ? 'all' : 'site', box = $('sLista');
+  $('sGh').href = 'https://github.com/' + SITE_REPO + '/commits/main' + (todos ? '' : '/index.html');
+  if (!siteData[k]){
+    box.replaceChildren(el('div','empty','Cargando commits…'));
+    try {
+      const r = await fetch('https://api.github.com/repos/' + SITE_REPO + '/commits?per_page=100' + (todos ? '' : '&path=index.html'), {headers:{Accept:'application/vnd.github+json'}});
+      if (r.status === 403 || r.status === 429) throw errRate(r);
+      if (!r.ok) throw new Error('GitHub respondió ' + r.status + '.');
+      siteData[k] = await r.json();
+    } catch (e) { box.replaceChildren(el('div','empty',e.message)); return; }
+  }
+  sitePintar();
+}
+function sitePintar(){
+  const k = $('sTodos').checked ? 'all' : 'site', q = $('sBuscar').value.trim().toLowerCase(), box = $('sLista');
+  const lista = (siteData[k] || []).map(c => {
+    const lines = c.commit.message.split('\n'), titulo = lines[0];
+    const desc = lines.slice(1).filter(l => !/^(Co-Authored-By|Claude-Session):/i.test(l.trim())).join('\n').trim();
+    return {sha:c.sha, url:c.html_url, fecha:c.commit.author.date, autor:c.commit.author.name || '', titulo, desc};
+  }).filter(c => !q || (c.titulo + ' ' + c.desc).toLowerCase().includes(q));
+  $('sStats').replaceChildren(el('span','stat', lista.length + ' commits'));
+  box.replaceChildren(); if (!lista.length){ box.append(el('div','empty','Sin commits.')); return; }
+  let dia = '';
+  lista.forEach(c => {
+    const d = c.fecha.slice(0,10); if (d !== dia){ dia = d; box.append(el('h2','grupo',d)); }
+    const card = el('div','sitecm'); card.append(el('b',null,c.titulo));
+    if (c.desc) card.append(el('p',null,c.desc));
+    const m = el('div','cm'); m.append(el('span',null,new Date(c.fecha).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})), el('span',null,c.autor));
+    const a = el('a',null,c.sha.slice(0,7)); a.href = c.url; a.target = '_blank'; a.rel = 'noopener'; m.append(a);
+    card.append(m); box.append(card);
+  });
+}
+$('sTodos').onchange = siteCargar; $('sBuscar').oninput = sitePintar;
+$('sRec').onclick = () => { siteData = {}; siteCargar(); };
+
 let codigoIniciado = false;
 function vista(v){
   document.querySelector('.wrap').classList.toggle('ancho', v !== 'log');
-  $('sub').textContent = v === 'codigo' ? 'repos (Git)' : v === 'pend' ? 'pendientes' : 'log de chats';
-  $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo'; $('vistaPend').hidden = v !== 'pend';
-  $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo'); $('tabPend').classList.toggle('on', v === 'pend');
-  try { history.replaceState(null, '', v === 'codigo' ? (code.archivo ? hashDe(code.archivo.full, code.linea) : '#codigo') : v === 'pend' ? '#pendientes' : location.pathname + location.search); } catch {}
-  ['nuevo','exportar','importar'].forEach(id => $(id).hidden = v === 'pend');
+  $('sub').textContent = v === 'codigo' ? 'repos (Git)' : v === 'pend' ? 'pendientes' : v === 'site' ? 'historial del site' : 'log de chats';
+  $('vistaLog').hidden = v !== 'log'; $('vistaCodigo').hidden = v !== 'codigo'; $('vistaPend').hidden = v !== 'pend'; $('vistaSite').hidden = v !== 'site';
+  $('tabLog').classList.toggle('on', v === 'log'); $('tabCodigo').classList.toggle('on', v === 'codigo'); $('tabPend').classList.toggle('on', v === 'pend'); $('tabSite').classList.toggle('on', v === 'site');
+  try { history.replaceState(null, '', v === 'codigo' ? (code.archivo ? hashDe(code.archivo.full, code.linea) : '#codigo') : v === 'pend' ? '#pendientes' : v === 'site' ? '#site' : location.pathname + location.search); } catch {}
+  ['nuevo','exportar','importar'].forEach(id => $(id).hidden = v === 'pend' || v === 'site');
   if (v === 'pend') pRender();
+  if (v === 'site' && !siteCargado){ siteCargado = true; siteCargar(); }
   if (v === 'codigo' && !codigoIniciado){ codigoIniciado = true; initFuentes(); cargarRepo(); }
 }
-$('tabPend').onclick = () => vista('pend');
+$('tabSite').onclick = () => vista('site');
 $('tabLog').onclick = () => vista('log');
 $('tabCodigo').onclick = () => vista('codigo');
 (function(){
@@ -1080,6 +1139,7 @@ $('tabCodigo').onclick = () => vista('codigo');
     if (s){ code.src = s; code.pend = {branch: p[1], path: p[2], line: +p[3] || 0}; vista('codigo'); }
   } else if (H === '#codigo') vista('codigo');
   else if (H === '#pendientes') vista('pend');
+  else if (H === '#site') vista('site');
 })();
 
 cargar().then(irAEntrada);
