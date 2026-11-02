@@ -63,6 +63,14 @@ pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padd
 .fbtn{display:block;width:100%;text-align:left;background:none;border:none;border-radius:6px;padding:5px 8px;font:12.5px ui-monospace,Consolas,monospace;color:var(--mute);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fbtn:hover{background:var(--panel2);color:var(--text)}
 .fbtn.on{background:var(--acc2);color:#fff}
+.hist{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.hist h4{margin:0 0 6px;font:600 12px system-ui,sans-serif;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.hday{font:11.5px system-ui,sans-serif;color:var(--mute);margin:8px 2px 3px}
+.hit{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-left:3px solid var(--line);border-radius:6px;padding:5px 8px;margin:2px 0;cursor:pointer;color:var(--text);font:12px system-ui,sans-serif}
+.hit:hover{background:var(--panel2)}
+.hit.on{background:var(--panel2);border-left-color:var(--acc2);border-color:var(--acc2)}
+.hit b{display:block;font-weight:600;white-space:normal;overflow-wrap:anywhere}
+.hit small{display:block;color:var(--mute);font:11px ui-monospace,Consolas,monospace;margin-top:2px}
 .viewer{background:var(--panel);border:1px solid var(--line);border-radius:12px;min-width:0}
 .vbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
 .vbar .path{font:13px ui-monospace,Consolas,monospace;flex:1 1 100%;word-break:break-all}
@@ -179,7 +187,7 @@ dialog textarea{min-height:90px;resize:vertical}
       </div>
     </div>
     <div class="code-wrap">
-      <div class="filelist" id="archivos"></div>
+      <div class="filelist"><div id="archivos"></div><div class="hist" id="histBox" hidden><h4>Historial del archivo</h4><div id="histList"></div></div></div>
       <div class="viewer">
         <div class="vbar" id="vbar" hidden>
           <div class="path" id="vpath"></div>
@@ -631,7 +639,7 @@ function crumb(){
   if (code.archivo) c.append(document.createTextNode(' · ' + code.archivo.rel));
 }
 function limpiarVisor(){
-  code.archivo = null; $('vbar').hidden = true; $('vinfo').hidden = true; $('archivos').replaceChildren(); crumb();
+  code.archivo = null; $('vbar').hidden = true; $('vinfo').hidden = true; $('archivos').replaceChildren(); $('histBox').hidden = true; crumb();
 }
 
 function initFuentes(){
@@ -705,6 +713,7 @@ async function abrirArchivo(f, opt){
       const o = el('option', null, 'v' + (total - i) + (i === 0 ? ' (actual)' : '') + ' · ' + c.commit.author.date.slice(0,10) + ' · ' + c.commit.message.split('\n')[0].slice(0,60) + ' · ' + c.sha.slice(0,7));
       o.value = i; sel.append(o);
     });
+    pintarHistorial();
     $('vpath').textContent = code.src.repo + ' @ ' + code.branch + ' / ' + f.full;
     $('vhist').href = 'https://github.com/' + code.src.repo + '/commits/' + code.branch + '/' + f.full;
     $('vbar').hidden = false;
@@ -718,6 +727,23 @@ function aLineas(t){
   const l = t.replace(/\r\n/g, '\n').split('\n');
   if (l.length && l[l.length-1] === '') l.pop();
   return l;
+}
+function pintarHistorial(){
+  const box = $('histBox'), cont = $('histList'); cont.replaceChildren();
+  const total = code.commits.length; box.hidden = !total; let dia = '';
+  code.commits.forEach((c, i) => {
+    const d = c.commit.author.date.slice(0,10);
+    if (d !== dia){ dia = d; cont.append(el('div', 'hday', d)); }
+    const b = el('button', 'hit' + (i === code.idx ? ' on' : '')); b.dataset.i = i;
+    b.append(el('b', null, 'v' + (total - i) + (i === 0 ? ' (actual) · ' : ' · ') + c.commit.message.split('\n')[0].slice(0,90)));
+    b.append(el('small', null, c.sha.slice(0,7) + ' · ' + (c.commit.author.name || '')));
+    b.onclick = () => elegirVersion(i); cont.append(b);
+  });
+}
+function elegirVersion(i){
+  code.idx = i; $('vversion').value = i;
+  document.querySelectorAll('.hit').forEach(b => b.classList.toggle('on', +b.dataset.i === i));
+  mostrarVersion();
 }
 async function mostrarVersion(){
   const c = code.commits[code.idx]; if (!c){ msg('Este archivo no tiene historial en esta rama.'); return; }
@@ -777,7 +803,7 @@ $('brSel').onchange = ev => { code.branch = ev.target.value; cargarArbol(); };
 $('tokBtn').onclick = () => { $('tokPanel').hidden = !$('tokPanel').hidden; };
 $('tokSave').onclick = () => { const v = $('tokInp').value.trim(); if (!v) return; setTok(code.src, v); $('tokInp').value = ''; cargarRepo(); };
 $('tokDel').onclick = () => { setTok(code.src, ''); try { sessionStorage.clear(); } catch {} cargarRepo(); };
-$('vversion').onchange = ev => { code.idx = +ev.target.value; mostrarVersion(); };
+$('vversion').onchange = ev => elegirVersion(+ev.target.value);
 $('vdiff').onchange = () => { $('vmodo').disabled = $('vdiff').checked; mostrarVersion(); };
 $('vmodo').onchange = mostrarVersion;
 $('vcopiar').onclick = async ev => { try { await navigator.clipboard.writeText(code.texto || ''); ev.target.textContent = 'Copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar', 1500); } catch {} };
