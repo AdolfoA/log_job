@@ -242,6 +242,7 @@ dialog textarea{min-height:90px;resize:vertical}
           <label class="chk"><input type="checkbox" id="vdiff"> Ver cambios</label>
           <button id="vcopiar">Copiar</button>
           <button id="vlink">Copiar enlace</button>
+          <button id="vdl" title="Descargar este archivo (la versión elegida)">Descargar</button>
           <button id="vpdf" title="Abrir lo que se ve para imprimir o guardar como PDF">Exportar PDF</button>
           <a id="vgh" target="_blank" rel="noopener">Ver en GitHub</a>
           <a id="vhist" target="_blank" rel="noopener">Historial</a>
@@ -800,6 +801,25 @@ function pintarArbol(n, cont, nivel){
 const BIN_RE = /\.(docx?|xlsx?|pptx?|pdf)$/i;
 function tamano(n){ return n == null ? '' : n >= 1048576 ? (n/1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB'; }
 function versionDeNombre(path){ const m = path.split('/').pop().match(/[_\-. ]v(\d+(?:\.\d+)+)/i); return m ? m[1] : ''; }
+async function descargar(f, c, btn){
+  const rotulo = btn ? btn.textContent : '';
+  const sha = c.sha, enc = f.full.split('/').map(encodeURIComponent).join('/'), s = code.src;
+  const ruta = (s.priv || getTok(s))
+    ? 'https://api.github.com/repos/' + s.repo + '/contents/' + enc + '?ref=' + encodeURIComponent(sha)
+    : 'https://raw.githubusercontent.com/' + s.repo + '/' + sha + '/' + enc;
+  try {
+    if (btn){ btn.textContent = 'Descargando…'; btn.disabled = true; }
+    const r = await fetch(ruta, (s.priv || getTok(s)) ? {headers: authHeaders('application/vnd.github.raw+json')} : undefined);
+    if (r.status === 403 || r.status === 429) throw errRate(r);
+    if (!r.ok) throw new Error('No se pudo descargar (' + r.status + ').');
+    const blob = await r.blob(), nom = f.full.split('/').pop();
+    const rev = code.commits.indexOf(c), base = rev > 0 ? nom.replace(/(\.[^.]+)?$/, '_rev' + (code.commits.length - rev) + '$1') : nom;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = base; a.click(); URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert(e.message + ' Se abrirá el archivo en GitHub para que lo descargues desde ahí.');
+    window.open('https://github.com/' + s.repo + '/blob/' + sha + '/' + f.full, '_blank', 'noopener');
+  } finally { if (btn){ btn.textContent = rotulo; btn.disabled = false; } }
+}
 function mostrarDocumento(f, c){
   const total = code.commits.length, nom = f.full.split('/').pop(), ver = versionDeNombre(nom);
   const base = 'https://github.com/' + code.src.repo;
@@ -812,7 +832,9 @@ function mostrarDocumento(f, c){
   card.append(el('div', 'dm', [tamano(code.idx === 0 ? f.size : null), c.commit.author.name, c.commit.author.date.slice(0,10), c.commit.message.split('\n')[0]].filter(Boolean).join(' · ')));
   const acc = el('div', 'da');
   [['Abrir en GitHub', base + '/blob/' + c.sha + '/' + f.full], ['Descargar', base + '/raw/' + c.sha + '/' + f.full], ['Historial', base + '/commits/' + code.branch + '/' + f.full]].forEach(([t, u]) => {
-    const a = el('a', null, t); a.href = u; a.target = '_blank'; a.rel = 'noopener'; acc.append(a);
+    const a = el('a', null, t); a.href = u; a.target = '_blank'; a.rel = 'noopener';
+    if (t === 'Descargar') a.onclick = ev => { ev.preventDefault(); descargar(f, c, a); };
+    acc.append(a);
   });
   card.append(acc);
   card.append(el('div', 'dm', 'Es un archivo binario: el visor no muestra su contenido, pero aquí ves que existe, su versión y su historial. Para leerlo, ábrelo o descárgalo.'));
@@ -820,7 +842,8 @@ function mostrarDocumento(f, c){
     const ul = el('ul');
     code.commits.forEach((k, i) => {
       const li = el('li'), a = el('a', null, 'v' + (total - i) + (i === 0 ? ' (actual)' : '') + ' · ' + k.commit.author.date.slice(0,10) + ' · ' + k.commit.message.split('\n')[0].slice(0,70));
-      a.href = base + '/raw/' + k.sha + '/' + f.full; a.target = '_blank'; a.rel = 'noopener'; li.append(a); ul.append(li);
+      a.href = base + '/raw/' + k.sha + '/' + f.full; a.target = '_blank'; a.rel = 'noopener'; a.onclick = ev => { ev.preventDefault(); descargar(f, k); };
+      li.append(a); ul.append(li);
     });
     card.append(el('div', 'dm', 'Todas las revisiones:'), ul);
   }
@@ -935,6 +958,7 @@ $('tokDel').onclick = () => { setTok(code.src, ''); try { sessionStorage.clear()
 $('vversion').onchange = ev => elegirVersion(+ev.target.value);
 $('vdiff').onchange = () => { $('vmodo').disabled = $('vdiff').checked; mostrarVersion(); };
 $('vmodo').onchange = mostrarVersion;
+$('vdl').onclick = ev => { const c = code.commits[code.idx]; if (c && code.archivo) descargar(code.archivo, c, ev.target); };
 $('vcopiar').onclick = async ev => { try { await navigator.clipboard.writeText(code.texto || ''); ev.target.textContent = 'Copiado ✓'; setTimeout(() => ev.target.textContent = 'Copiar', 1500); } catch {} };
 
 /* ---------- Enlaces directos ---------- */
