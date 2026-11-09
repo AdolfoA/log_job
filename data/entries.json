@@ -470,5 +470,38 @@
    "Cambio",
    "Resuelto"
   ]
+ },
+ {
+  "id": "2026-11-09-001",
+  "fecha": "2026-11-09",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Envases (códigos 4) como una sola línea con la suma de sus componentes en el cascadeo real",
+  "resumen": "Se emuló en el modelo real (SAP_CO_CASCADEO_PP) el tratamiento de envases del modelo plan (celdas COMP SM4 1 a 5). Una celda nueva, antes del chequeo de duplicados, deja por cada envase solo su línea con la suma de 0AMOUNT y 0AMOUNT_REAL de todos sus componentes (materiales y actividades como mano de obra y transformación), recalcula PRECIO, PRECIO_REAL, COSTO y COSTO_REAL, pone STLKZ en blanco y elimina los componentes.",
+  "detalle": "Los envases solo tienen componentes (nunca semielaborados adentro), por eso no se recorren niveles: el total es la suma de las filas con MATERIAL_CASCADEO = envase en el nivel siguiente. El envase se reconoce por tener componentes debajo, sin depender de STLKZ ni de 0PIOBJSV, y las claves se rellenan para que un nulo no rompa los joins. Incluye la ponderación de envases con varias versiones de fabricación activas (SM4 3 del plan, fórmula valor × valor / suma del grupo). Deja dos DataFrames de revisión: df_envases_consolidados (línea del envase con valor nuevo) y df_envases_eliminados (filas originales que se quitan). Una segunda celda, antes del upsert, borra de Gold los componentes de envases del período (DELETE por 0FISCPER, MATERIAL_CASCADEO LIKE '4%' y LEVEL >= 1), porque el merge no borra filas; solo hace falta si el período ya estaba cargado. Archivo: agregar_envases_SM_cascadeo_v3.py. Pendiente de validar con datos (orden 000001063471, envase 443478): solo se verificó la sintaxis. Riesgo anotado: las actividades sin tarifa real quedan con 0AMOUNT_REAL nulo y la suma las ignora.",
+  "tags": [
+   "envases",
+   "COMP SM4",
+   "STLKZ",
+   "cascadeo",
+   "df_temp_1"
+  ]
+ },
+ {
+  "id": "2026-11-09-002",
+  "fecha": "2026-11-09",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Agregar envase solo",
+  "resumen": "Crear el envase como material principal con sus componentes, para cuando el envase se produce por sí solo y no dentro de un producto terminado. El usuario lo retomará más adelante.",
+  "detalle": "",
+  "tags": [
+   "envases",
+   "material principal"
+  ]
  }
 ]
