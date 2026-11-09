@@ -3,5 +3,5 @@
  "chats_revisados": [],
  "entradas_nuevas": [],
  "entradas_actualizadas": [],
- "nota": "2026-11-09 17:36 America/Caracas: no se pudieron leer los chats. ToolSearch no encontro las herramientas mcp__claude_ai__current_time, mcp__claude_ai__recent_chats ni mcp__claude_ai__read_conversation (error literal: 'No matching deferred tools found'). Tampoco existe add_repo en este entorno; el repo ya estaba clonado y 'git push --dry-run origin HEAD:main' dio 'Everything up-to-date'. Hora tomada con date del sistema. No se modifico entries.json."
+ "nota": "2026-11-09 17:37 America/Caracas: no se pudieron leer los chats. ToolSearch no encontro mcp__claude_ai__current_time, recent_chats ni read_conversation (error literal: 'No matching deferred tools found'; segunda busqueda por 'chats conversation current time' tampoco las devolvio). add_repo tampoco esta disponible; repo ya clonado. Hora tomada con date del sistema. No se modifico entries.json. El conector de claude.ai con las herramientas de chats no esta disponible en esta tarea programada."
 }
