@@ -503,5 +503,22 @@
    "envases",
    "material principal"
   ]
+ },
+ {
+  "id": "2026-11-17-001",
+  "fecha": "2026-11-17",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "Revisión por parte de CBC: COGP REAL versión con cambios",
+  "resumen": "El notebook REAL del cascadeo (SAP_CO_CASCADEO_PP, versión «new idea») queda pendiente de revisión por parte de CBC. Está subido a la rama dev del repo CBC, carpeta «COGP Real», para verlo en el visualizador.",
+  "detalle": "Cambios de esta versión frente a la anterior: (1) el recursivo abre solo los códigos que empiezan con 6; (2) se retiran las celdas del tratamiento de envases (código 4) dentro del notebook; (3) PRECIO/COSTO se redondean a 6 decimales; (4) se agrega una celda para borrar el período completo en Gold antes del merge, de modo que se inserte lo nuevo; (5) se agregan displays de validación para la orden 1063471 / envase 443478. Ubicación: repo CBC (privado), rama dev, carpeta «COGP Real», archivo _new_idea__SAP_CO_CASCADEO_PP.ipynb. Pendiente: que CBC revise y confirme; antes de ejecutar, corregir la celda de borrado (nombre de variable de la tabla, doble ejecución del spark.sql y formato del período 0FISCPER en Gold).",
+  "tags": [
+   "COGP Real",
+   "revisión CBC",
+   "envases",
+   "cascadeo"
+  ]
  }
 ]
