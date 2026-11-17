@@ -538,5 +538,22 @@
    "validación CBC",
    "aceptación de cambios"
   ]
+ },
+ {
+  "id": "2026-11-17-003",
+  "fecha": "2026-11-17",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "COGP PLAN: probar el archivo SP00 con agua",
+  "resumen": "Pendiente probar en el COGP PLAN (modelo de costo plan con cascadeo) el archivo del centro SP00 con el tratamiento de agua.",
+  "detalle": "Alcance: ejecutar el COGP PLAN con el archivo de SP00 y verificar que el agua se trate correctamente (puestos de agua, enfoque Maestro y conversión GLN→L). Referencia: SP00 y SP01 figuran en la lista de centros Maestro de la rama main (entrada 2026-11-02-002). Queda abierto hasta completar la prueba.",
+  "tags": [
+   "COGP PLAN",
+   "SP00",
+   "agua",
+   "prueba"
+  ]
  }
 ]
