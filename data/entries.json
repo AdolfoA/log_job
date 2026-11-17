@@ -520,5 +520,23 @@
    "envases",
    "cascadeo"
   ]
+ },
+ {
+  "id": "2026-11-17-002",
+  "fecha": "2026-11-17",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "COGP PLAN: validaciones de RP04 y PP01 por parte de CBC (aceptación de cambios)",
+  "resumen": "Pendiente que CBC valide los resultados de los centros RP04 y PP01 en el COGP PLAN (modelo de costo plan con cascadeo) y acepte los cambios realizados.",
+  "detalle": "Alcance: validación por parte de CBC de los centros RP04 y PP01 del COGP PLAN y aceptación formal de los cambios. Queda abierto hasta recibir la confirmación de CBC. Referencia previa: el caso RP04 / BA021738 (enfoque Maestro y conversión GLN→L) ya está registrado en la bitácora (entrada 2026-10-29-002).",
+  "tags": [
+   "COGP PLAN",
+   "RP04",
+   "PP01",
+   "validación CBC",
+   "aceptación de cambios"
+  ]
  }
 ]
