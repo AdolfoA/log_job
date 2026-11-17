@@ -503,5 +503,24 @@
    "envases",
    "material principal"
   ]
+ },
+ {
+  "id": "2026-11-17-001",
+  "fecha": "2026-11-17",
+  "chat": "Adolfo [Modelo costo agua]",
+  "categoria": "Modelo de costos",
+  "tipo": "Cambio",
+  "estado": "Resuelto",
+  "titulo": "Envases (código 4) en el cascadeo real: costo unitario mensual × consumo del PT, validado con la orden 1063471",
+  "resumen": "El tratamiento de envases del modelo real (SAP_CO_CASCADEO_PP, notebook clone v7) ahora calcula el costo unitario del mes del envase (suma de los montos de todas sus órdenes / suma de su producción) y lo multiplica por lo que consume cada producto, igual que PLAN. Reemplaza la suma de hijos prorrateados por orden, que inflaba la línea del envase unas 6 veces cuando el envase tenía varias órdenes en el mes. Validado con la orden 1063471 / envase 443478: el resultado coincide con el cálculo manual y con la suma de los hijos del reporte.",
+  "detalle": "Qué cambia. Antes (entrada 2026-11-09-001) la línea del envase se armaba con la suma de sus hijos ya prorrateados por orden dentro de cada PT. Con varias órdenes del envase en el mes, la suma de (monto de la orden × consumo / producción de la orden) no es igual a (suma de montos / suma de producción) × consumo, y la línea salía inflada: unas 6 veces en la orden 1063471 (envase 443478, 6 órdenes). Ahora el envase se resuelve a nivel mensual en cinco pasos (celdas 19 a 23): (1) se quitan del PT las filas con MATERIAL_CASCADEO que empieza por 4; (2) se suman entre las órdenes del mes las filas propias del envase en nivel 0 (con componente, sin la fila de producción), con 0PRODORDER en blanco; (3) producción total = suma de la producción de cada orden contada una vez, y costo unitario = monto total / producción total, en plan y en real; (4) en la línea del envase de cada PT, 0AMOUNT = costo unitario plan × 0QUANTITY y 0AMOUNT_REAL = costo unitario real × 0QUANTITY_REAL, se recalculan PRECIO, PRECIO_REAL, COSTO y COSTO_REAL, y STLKZ queda en blanco; (5) las raíces del envase por orden se reemplazan por una fila mensual con la producción total. Se conservan 0QUANTITY(_REAL), CANTIDAD_PRODUCIDA(_CJS), FUNCTIONALLOCATION y LEVEL. Los semielaborados 6 no se tocan. Un PT con dos líneas del mismo envase ya no cuenta doble, porque cada línea usa su propio consumo. Validación (orden 1063471, envase 443478, 0VTYPE 010, 0CURTYPE 70): sin filas con MATERIAL_CASCADEO 4, una línea del envase por combinación de 0VTYPE y 0CURTYPE y sin claves duplicadas. Notas abiertas: (a) la celda 22 redondea COSTO a 3 decimales y COSTO_REAL a 6; conviene dejar ambos en 6; (b) el merge no borra filas y las claves del envase cambian (0PRODORDER en blanco), así que si el período ya estaba cargado hay que borrar de Gold las raíces del envase por orden y los hijos con MATERIAL_CASCADEO 4 antes de volver a cargar; (c) comprobar que ningún envase lleve un semielaborado 6 adentro; (d) correr la revisión de claves duplicadas y de nulos sobre el df_temp_1 final, antes de la celda 26; (e) CANTIDAD_PRODUCIDA_CJS de la fila mensual del envase queda vacía; (f) COSTO y COSTO_REAL se dividen entre las unidades del PT, no entre cajas. Archivos: notebook en el repo privado CBC, rama dev, carpeta «COGP Real» (_Clone__SAP_CO_CASCADEO_PP.ipynb, sin salidas); documento de justificación «REAL – Sumarización del envase (código 4) en la línea del PT». No se anotan montos porque este repo es público.",
+  "tags": [
+   "envases",
+   "COMP SM4",
+   "STLKZ",
+   "cascadeo",
+   "costo unitario",
+   "COGP Real"
+  ]
  }
 ]
