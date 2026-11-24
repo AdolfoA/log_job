@@ -571,5 +571,20 @@
    "documentación",
    "revisión"
   ]
+ },
+ {
+  "id": "2026-11-24-001",
+  "fecha": "2026-11-24",
+  "chat": "Adolfo Personal",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Site: filtros y campo Chat usan los proyectos de Claude",
+  "resumen": "Los filtros de chat y las sugerencias del campo Chat del formulario ahora son los proyectos de Claude (Z2H Academmy, Claude Code, Adolfo Ocio, Adolfo Personal, Adolfo C1C, Cosas de Karla). El campo sigue aceptando cualquier otro nombre. Los nombres antiguos solo aparecen en los filtros mientras tengan entradas.",
+  "detalle": "La lista está en la constante PROYECTOS de index.html; para agregar o quitar un proyecto basta editarla. Las entradas antiguas no se modificaron: conservan su nombre de chat original.",
+  "tags": [
+   "Cambio",
+   "Hecho"
+  ]
  }
 ]
