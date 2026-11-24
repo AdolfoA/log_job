@@ -586,5 +586,20 @@
    "Cambio",
    "Hecho"
   ]
+ },
+ {
+  "id": "2026-11-24-002",
+  "fecha": "2026-11-24",
+  "chat": "Adolfo Personal",
+  "categoria": "Bitácora",
+  "tipo": "Cambio",
+  "estado": "Hecho",
+  "titulo": "Entradas con nombres de chat antiguos pasan a «Revisar»",
+  "resumen": "Las 33 entradas cuyo chat no era uno de los proyectos de Claude (Adolfo [Modelo costo agua], Adolfo Claude y Adolfo [Pipeline ADF]) ahora tienen el chat «Revisar», para que los filtros ya no muestren los nombres antiguos.",
+  "detalle": "Solo cambió el campo chat; el resto de cada entrada quedó igual. Pendiente: reasignar cada entrada «Revisar» al proyecto que corresponda (edición desde la página o en data/entries.json). Esto precisa lo dicho en la entrada 2026-11-24-001, que indicaba que las entradas antiguas no se habían modificado.",
+  "tags": [
+   "Cambio",
+   "Hecho"
+  ]
  }
 ]
