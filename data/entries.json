@@ -2,7 +2,7 @@
  {
   "id": "2026-10-27-001",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "tipo": "Cambio",
   "estado": "Hecho",
   "titulo": "Completar df_C con puestos faltantes de df_A_volumen",
@@ -18,7 +18,7 @@
  {
   "id": "2026-10-27-002",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "tipo": "Consulta",
   "estado": "Resuelto",
   "titulo": "Error AMBIGUOUS_REFERENCE en Periodo_Mes",
@@ -34,7 +34,7 @@
  {
   "id": "2026-10-27-003",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "tipo": "Hallazgo",
   "estado": "Resuelto",
   "titulo": "Resuelto: el except de df_E sobrescribía df_C y perdía las filas agregadas",
@@ -51,7 +51,7 @@
  {
   "id": "2026-10-27-004",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "tipo": "Pendiente",
   "estado": "Abierto",
   "titulo": "Definir el CECO del puesto 2001",
@@ -66,7 +66,7 @@
  {
   "id": "2026-10-27-005",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "tipo": "Hallazgo",
   "estado": "Abierto",
   "titulo": "Account key de Azure Storage en texto plano (celda 4)",
@@ -81,7 +81,7 @@
  {
   "id": "2026-10-27-006",
   "fecha": "2026-10-27",
-  "chat": "Adolfo [Pipeline ADF]",
+  "chat": "Revisar",
   "tipo": "Consulta",
   "estado": "Hecho",
   "titulo": "Qué es el pipeline Listar_Contenido_Final + ForEach_Archivos",
@@ -96,7 +96,7 @@
  {
   "id": "2026-10-19-001",
   "fecha": "2026-10-19",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Claude / Agentes",
   "tipo": "Consulta",
   "estado": "Hecho",
@@ -112,7 +112,7 @@
  {
   "id": "2026-10-19-002",
   "fecha": "2026-10-19",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Git",
   "tipo": "Consulta",
   "estado": "Hecho",
@@ -128,7 +128,7 @@
  {
   "id": "2026-10-20-001",
   "fecha": "2026-10-20",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -144,7 +144,7 @@
  {
   "id": "2026-10-20-002",
   "fecha": "2026-10-20",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -160,7 +160,7 @@
  {
   "id": "2026-10-22-001",
   "fecha": "2026-10-22",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Pipeline / Spark",
   "tipo": "Consulta",
   "estado": "Hecho",
@@ -177,7 +177,7 @@
  {
   "id": "2026-10-26-001",
   "fecha": "2026-10-26",
-  "chat": "Adolfo Claude",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Consulta",
   "estado": "Abierto",
@@ -241,7 +241,7 @@
  {
   "id": "2026-10-28-001",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Bitácora",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -257,7 +257,7 @@
  {
   "id": "2026-10-28-002",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Repos y código",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -273,7 +273,7 @@
  {
   "id": "2026-10-28-003",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Repos y código",
   "tipo": "Decisión",
   "estado": "Hecho",
@@ -288,7 +288,7 @@
  {
   "id": "2026-10-28-004",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Repos y código",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -304,7 +304,7 @@
  {
   "id": "2026-10-28-005",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Bitácora",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -321,7 +321,7 @@
  {
   "id": "2026-10-28-006",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Bitácora",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -336,7 +336,7 @@
  {
   "id": "2026-10-28-007",
   "fecha": "2026-10-28",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -352,7 +352,7 @@
  {
   "id": "2026-10-29-001",
   "fecha": "2026-10-29",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Cambio",
   "estado": "Hecho",
@@ -369,7 +369,7 @@
  {
   "id": "2026-10-29-002",
   "fecha": "2026-10-29",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Hallazgo",
   "estado": "Resuelto",
@@ -384,7 +384,7 @@
  {
   "id": "2026-11-02-001",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -399,7 +399,7 @@
  {
   "id": "2026-11-02-002",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -414,7 +414,7 @@
  {
   "id": "2026-11-02-003",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -429,7 +429,7 @@
  {
   "id": "2026-11-02-004",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Bitácora",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -444,7 +444,7 @@
  {
   "id": "2026-11-02-005",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -459,7 +459,7 @@
  {
   "id": "2026-11-02-006",
   "fecha": "2026-11-02",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Bitácora",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -474,7 +474,7 @@
  {
   "id": "2026-11-09-001",
   "fecha": "2026-11-09",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Cambio",
   "estado": "Resuelto",
@@ -492,7 +492,7 @@
  {
   "id": "2026-11-09-002",
   "fecha": "2026-11-09",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -507,7 +507,7 @@
  {
   "id": "2026-11-17-001",
   "fecha": "2026-11-17",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -524,7 +524,7 @@
  {
   "id": "2026-11-17-002",
   "fecha": "2026-11-17",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -542,7 +542,7 @@
  {
   "id": "2026-11-17-003",
   "fecha": "2026-11-17",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Modelo de costos",
   "tipo": "Pendiente",
   "estado": "Abierto",
@@ -559,7 +559,7 @@
  {
   "id": "2026-11-23-001",
   "fecha": "2026-11-23",
-  "chat": "Adolfo [Modelo costo agua]",
+  "chat": "Revisar",
   "categoria": "Documentación",
   "tipo": "Pendiente",
   "estado": "Abierto",
