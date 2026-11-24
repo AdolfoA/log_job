@@ -303,7 +303,7 @@ dialog textarea{min-height:90px;resize:vertical}
     <label>Título<input name="titulo" required></label>
     <label>Resumen<textarea name="resumen"></textarea></label>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <label>Chat / origen<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]"></label>
+      <label>Chat / origen<input name="chat" list="chatsList" placeholder="Proyecto (elige o escribe otro)"></label>
       <label>Fecha límite<input type="date" name="limite"></label>
     </div>
     <div class="lbl">Tags<div class="chips" id="pTags"></div></div>
@@ -314,7 +314,7 @@ dialog textarea{min-height:90px;resize:vertical}
 <dialog id="dlg">
   <form method="dialog" id="form">
     <h2 style="margin:0" id="dlgTitulo">Nueva entrada</h2>
-    <label>Chat<input name="chat" list="chatsList" placeholder="Adolfo [Modelo costo agua]" required></label>
+    <label>Chat<input name="chat" list="chatsList" placeholder="Proyecto (elige o escribe otro)" required></label>
     <datalist id="chatsList"></datalist>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
       <label>Fecha<input type="date" name="fecha" required></label>
@@ -374,8 +374,12 @@ const ESTILOS = {
   tipo: {Cambio:['🔧','#34d399'], Consulta:['❓','#60a5fa'], Decisión:['⚖️','#a78bfa'], Hallazgo:['🔎','#f87171'], Pendiente:['⏳','#fbbf24']},
   estado: {Abierto:['📂','#fb923c'], Resuelto:['✅','#34d399'], Hecho:['🏁','#38bdf8']},
   categoria: {'Bitácora':['📒','#2dd4bf'], 'Claude / Agentes':['🤖','#a78bfa'], 'Documentación':['📄','#60a5fa'], 'Git':['🌿','#fb923c'], 'Juegos':['🎮','#f472b6'], 'Modelo de costos':['💰','#fbbf24'], 'Pipeline / Spark':['⚡','#38bdf8'], 'Repos y código':['💻','#a3e635'], 'Seguridad':['🔒','#f87171'], 'Sin categoría':['📁','#94a3b8']},
-  chat: {'Adolfo Claude':['🤖','#a78bfa'], 'Adolfo Ocio':['🎲','#f472b6'], 'Adolfo [Modelo costo agua]':['💧','#38bdf8'], 'Adolfo [Pipeline ADF]':['🔀','#fb923c']}
+  chat: {'Z2H Academmy':['🎓','#60a5fa'], 'Claude Code':['🤖','#a78bfa'], 'Adolfo Ocio':['🎲','#f472b6'], 'Adolfo Personal':['👤','#2dd4bf'], 'Adolfo C1C':['🏢','#fbbf24'], 'Cosas de Karla':['🌸','#f87171'],
+         'Adolfo Claude':['🤖','#a78bfa'], 'Adolfo [Modelo costo agua]':['💧','#38bdf8'], 'Adolfo [Pipeline ADF]':['🔀','#fb923c']}
 };
+/* Proyectos de Claude: son los filtros de arriba y las sugerencias del campo Chat.
+   Para agregar o quitar uno, edita esta lista. En el formulario se puede escribir cualquier otro nombre. */
+const PROYECTOS = ['Z2H Academmy', 'Claude Code', 'Adolfo Ocio', 'Adolfo Personal', 'Adolfo C1C', 'Cosas de Karla'];
 function estilo(kind, v){ const e = (ESTILOS[kind] || {})[v]; return e ? {i: e[0], c: e[1]} : {i: kind === 'chat' ? '💬' : '🏷️', c: hashPal(v)}; }
 function colorear(node, kind, v, texto){
   const st = estilo(kind, v); node.classList.add('k'); node.style.setProperty('--c', st.c); node.textContent = st.i + ' ' + (texto || v); return node;
@@ -394,14 +398,16 @@ function render(){
   const data = todas();
   const chatsU = [...new Set(data.map(e => e.chat))].sort();
   const tiposU = [...new Set(data.map(e => e.tipo))].sort();
-  chips($('chats'), chatsU, 'chat');
+  // Filtros: primero los proyectos; luego, solo los nombres antiguos que aún tienen entradas.
+  chips($('chats'), [...PROYECTOS, ...chatsU.filter(c => !PROYECTOS.includes(c))], 'chat');
   const tc = $('tipos'); tc.replaceChildren();
   const mk = (t, on, fn) => { const ch = el('span','chip' + (on ? ' on' : ''), t); ch.onclick = fn; tc.append(ch); };
   mk('Todos', !filtro.tipo && !filtro.estado, () => { filtro.tipo = ''; filtro.estado = ''; render(); });
   tiposU.forEach(v => { mk(v, filtro.tipo === v, () => { filtro.tipo = filtro.tipo === v ? '' : v; render(); }); colorear(tc.lastChild, 'tipo', v); });
   tc.append(el('span','sep'));
   ['Abierto','Resuelto','Hecho'].filter(x => data.some(e => e.estado === x)).forEach(v => { mk(v, filtro.estado === v, () => { filtro.estado = filtro.estado === v ? '' : v; render(); }); colorear(tc.lastChild, 'estado', v); });
-  $('chatsList').replaceChildren(...chatsU.map(c => { const o = el('option'); o.value = c; return o; }));
+  // Sugerencias del campo Chat: solo los proyectos (el campo sigue aceptando texto libre).
+  $('chatsList').replaceChildren(...PROYECTOS.map(c => { const o = el('option'); o.value = c; return o; }));
 
   const q = filtro.q.toLowerCase();
   let vis = data.filter(e =>
