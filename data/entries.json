@@ -601,5 +601,20 @@
    "Cambio",
    "Hecho"
   ]
+ },
+ {
+  "id": "2026-11-25-001",
+  "fecha": "2026-11-25",
+  "chat": "Adolfo Personal",
+  "categoria": "Bitácora",
+  "tipo": "Pendiente",
+  "estado": "Abierto",
+  "titulo": "TEST",
+  "resumen": "TEST",
+  "detalle": "",
+  "tags": [
+   "Pendiente",
+   "Abierto"
+  ]
  }
 ]
